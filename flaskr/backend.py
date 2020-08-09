@@ -1,12 +1,31 @@
-from flask import Flask, request, Response
 import typing
-import session
 import datetime
+import pathlib
+from flask import Blueprint, g, request, Response
+from . import database
+from . import database_context
+from . import session
 
+# Plan of attack:
+# 1. Get extremely simple 'post' API working that just logs traffic (as I had already done)
+# 2. Record data to a simple SQLite database, rather than a .txt file
+# 3. Implement tracking of sessions
+# 4. Implement classifications of sessions
+# 5. Implement plotting of analytics via API
 
-app = Flask(__name__)
+# Create blueprint, which will be used to register URL routes
+blueprint = Blueprint('backend', __name__)
+
+# A simple page that says hello
+@blueprint.route('/hello')
+def hello():
+    return 'Hello, World!'
+
+"""
 app.config['next_session_id'] = 1
 app.config['active_sessions_by_ip'] = {}
+app.config['db'] = database.Database('views.db')  # TODO: MOVE TO 'INSTANCE' FOLDER
+
 # next_session_id = 1
 # Active sessions, indexed by IP address
 # active_sessions_by_ip: typing.Dict[str, session.Session] = {}
@@ -31,13 +50,13 @@ def get_session(ip_addr: str):
     else:
         return existing_session
 
-@app.route('/', methods=['GET'])
+@blueprint.route('/', methods=['GET'])
 def hello_world():
     return Response(status=200)
 
 # TODO: AUTHENTICATION, 'USER KEYS'
 # FOR NOW, JUST GET THIS LOGGING TRAFFIC TO A FILE
-@app.route('/report_traffic', methods=['POST'])
+@blueprint.route('/report_traffic', methods=['POST'])
 def report_traffic():
     url = request.args['url']
     ip_addr = request.args['ip_addr']
@@ -62,9 +81,10 @@ def report_traffic():
             user_agent,
         ))
 
+    # TODO: THESE STRINGS NEED TO BE CHECKED BEFORE WRITING TO DATABASE
+    # Write to database
+    app.config['db'].record_view(url, ip_addr, user_agent)
+
     # Return success
     return Response(status=200)
-
-# TODO: DEBUGGING ONLY
-if __name__ == "__main__":
-    app.run(port=5001)
+"""
