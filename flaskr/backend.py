@@ -4,6 +4,7 @@ import pathlib
 from flask import Blueprint, g, request, Response
 from . import database
 from . import database_context
+from . import user
 from . import session
 
 # Plan of attack:
@@ -13,12 +14,27 @@ from . import session
 # 4. Implement classifications of sessions
 # 5. Implement plotting of analytics via API
 
+# Currently, users are defined by their IP address.
+# A session is defined by a user
+
+
+
 # Create blueprint, which will be used to register URL routes
 blueprint = Blueprint('backend', __name__)
 
 # A simple page that says hello
 @blueprint.route('/hello')
 def hello():
+    user_ip = request.environ.get(
+        'HTTP_X_FORWARDED_FOR', request.environ['REMOTE_ADDR']
+    )
+    db = database_context.get_db()
+    user = db.get_user(user_ip)
+    if not user:
+        print('Creating user')
+        user = db.create_user(user_ip)
+        db.commit()
+    print(user)
     return 'Hello, World!'
 
 """

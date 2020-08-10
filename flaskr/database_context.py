@@ -1,5 +1,5 @@
 
-from flask import g
+from flask import g, current_app
 import flaskr.database as db
 """Couple functions for accessing the database from the request context, "g"."""
 
