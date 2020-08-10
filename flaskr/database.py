@@ -54,17 +54,24 @@ class Database:
                 user_data['_location'],
             )
 
+    def update_user(
+            self,
+            user: user.User,
+    ):
+        # TODO
+        return
+
     def create_session(
             self,
             user: user.User,
             start_time: datetime.datetime,
     ) -> typing.Optional[session.Session]:
         # Insert
-        command = 'insert into _Sessions values (NULL, ?, ?, ?, ?, ?, ?)'
+        command = 'insert into _Sessions values (NULL, ?, ?, ?, ?)'
         values = (
             user.user_id,
-            start_time.date(),
-            start_time.date(),
+            start_time,
+            start_time,
             0,
         )
         self.cur.execute(command, values)
@@ -78,22 +85,42 @@ class Database:
     ) -> typing.Optional[session.Session]:
         command = 'select * from _Sessions where _user_id = ? AND' \
             ' _first_request_time = ?'
-        values = (user.user_id, start_time.date())
+        values = (user.user_id, start_time)
         session_data = self.cur.execute(command, values).fetchone()
         return session.Session(
             session_data['_session_id'],
             session_data['_user_id'],
-            session_data['_first_request_time'],
-            session_data['_last_request_time'],
+            datetime.datetime.strptime(session_data['_first_request_time'], '%Y-%m-%d %H:%M:%S.%f'),
+            datetime.datetime.strptime(session_data['_last_request_time'], '%Y-%m-%d %H:%M:%S.%f'),
             session_data['_num_requests'],
         )
 
-    # def record_view(
-    #         self,
-    #         viewed_url: str,
-    #         ip_address: str,
-    #         user_agent: str,
-    # ):
-    #     query = 'insert into Views values (NULL, ?, ?, ?)'
-    #     values = (viewed_url, ip_address, user_agent)
-    #     self.cur.execute(query, values)
+    def update_session(
+        self,
+        session: session.Session,
+    ):
+        command = 'update _Sessions ' \
+            'set _user_id = ?,' \
+                '_first_request_time = ?,' \
+                '_last_request_time = ?,' \
+                '_num_requests = ? ' \
+                'where _session_id = ?'
+        values = (
+            session.user_id,
+            session.first_request_time,
+            session.last_request_time,
+            session.num_requests,
+            session.session_id,
+        )
+        self.cur.execute(command, values)
+
+    def record_view(
+            self,
+            session: session.Session,
+            timestamp: datetime.datetime,
+            viewed_url: str,
+            user_agent: str,
+    ):
+        query = 'insert into _Views values (NULL, ?, ?, ?, ?)'
+        values = (session.session_id, timestamp, viewed_url, user_agent)
+        self.cur.execute(query, values)
