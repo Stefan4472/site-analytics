@@ -39,6 +39,16 @@ class Session:
         sec_inactive = (curr_time - self.last_request_time).total_seconds()
         return sec_inactive < MAX_INACTIVE_TIME_SEC
 
+    def calc_requests_per_second(
+            self,
+    ) -> float:
+        if self.first_request_time == self.last_request_time:
+            return 0
+        else:
+            duration_sec = \
+                (self.last_request_time - self.first_request_time).total_seconds()
+            return self.num_requests / duration_sec
+            
     def __str__(self):
         return 'Session(id={}, user_id={}, start_time={}, requests={})'.format(
             self.session_id, 

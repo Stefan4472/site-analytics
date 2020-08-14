@@ -49,6 +49,7 @@ def refresh_active_sessions():
             print('Culling a session that has become inactive')
             # Update session in database
             db.update_session(_session)
+            db.get_user_by_id(_session.user_id).on_session_finished(_session)
             # Remove session from `active_sessions` dict
             del current_app.config['ACTIVE_SESSIONS'][inactive_id]
         # Commit updated data

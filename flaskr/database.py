@@ -54,6 +54,22 @@ class Database:
                 user_data['_location'],
             )
 
+    def get_user_by_id(
+            self,
+            id: int,
+    ) -> typing.Optional[user.User]:
+        command = 'select * from _Users where _user_id = ?'
+        values = (id,)
+        user_data = self.cur.execute(command, values).fetchone()
+        if user_data is None:
+            return None
+        else:
+            return user.User(
+                user_data['_user_id'], 
+                user_data['_ip_address'],
+                user_data['_location'],
+            )
+
     def update_user(
             self,
             user: user.User,
@@ -72,7 +88,7 @@ class Database:
             user.user_id,
             start_time,
             start_time,
-            0,
+            1,
         )
         self.cur.execute(command, values)
         # Retrieve and return
@@ -99,8 +115,9 @@ class Database:
         self,
         session: session.Session,
     ):
-        command = 'update _Sessions ' \
-            'set _user_id = ?,' \
+        command = \
+            'update _Sessions ' \
+                'set _user_id = ?,' \
                 '_first_request_time = ?,' \
                 '_last_request_time = ?,' \
                 '_num_requests = ? ' \
