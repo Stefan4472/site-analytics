@@ -29,39 +29,6 @@ from . import session
 # Create blueprint, which will be used to register URL routes
 blueprint = Blueprint('backend', __name__)
 
-# TODO: HOW CAN WE MAKE THIS RUN IN THE BACKGROUND?
-def refresh_active_sessions():
-    db = database_context.get_db()
-
-    # # Get list of user_ids that are now inactive
-    # inactive_user_ids = \
-    #     [u_id for u_id, _session in 
-    #         current_app.config['ACTIVE_SESSIONS'].items() 
-    #         if not _session.is_active()]
-    # # Iterate over inactive user_ids.
-    # # This is unfortunately the best way to iterate over a dict
-    # # and remove elements
-    # for inactive_id in inactive_user_ids:
-    #     _session = current_app.config['ACTIVE_SESSIONS'][inactive_id]
-    #     print('Culling a session that has become inactive')
-    #     # Update session in database
-    #     db.update_session(_session)
-    #     db.get_user_by_id(_session.user_id).on_session_finished(_session)
-    #     # Remove session from `active_sessions` dict
-    #     del current_app.config['ACTIVE_SESSIONS'][inactive_id]
-    # # Commit updated data
-    # db.commit()
-    # # Set time for next refresh
-    # current_app.config['NEXT_SESSION_REFRESH'] = \
-    #     curr_time + datetime.timedelta(seconds=session.MAX_INACTIVE_TIME_SEC)
-
-# def commit_active_sessions():
-#     print('Commiting active sessions')
-#     db = database_context.get_db()
-#     for _session in current_app.config['ACTIVE_SESSIONS'].values():
-#         db.update_session(_session)
-#     db.commit()
-
 
 def get_or_create_user(
         ip_address: str,

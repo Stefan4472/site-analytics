@@ -242,3 +242,32 @@ class Database:
         self.cur.execute(command, values)
         if commit:
             self.commit()
+
+    def cleanup_session_cache(
+            self,
+            commit: bool = False,
+    ) -> int:
+        """Go through the `_CachedSessions` table, checking for stale records
+        and removing stale records."""
+        # Get all records that are not marked stale
+        command = 'select * from _CachedSessions where _certified_stale = ?'
+        values = (0,)
+        for active_record in self.cur.execute(command, values).fetchall():
+            print('Found active session {}'.format(active_record['_session_id']))
+            session = self.get_session_by_id(active_record['_session_id'])
+            if not session.is_active():
+                print('Found an inactive session (id={})'.format(session.session_id))
+                self.update_cached_session(session, is_stale=True)
+        # Count number of stale records
+        count_command = \
+            'select Count(*) from _CachedSessions where _certified_stale = ?'
+        count_values = (1,)
+        self.cur.execute(count_command, count_values)
+        rows_deleted = self.cur.fetchone()[0]
+        # Drop all records that are stale
+        drop_command = 'delete from _CachedSessions where _certified_stale = ?'
+        drop_values = (1,)
+        self.cur.execute(drop_command, drop_values)
+        if commit:
+            self.commit()
+        return rows_deleted
