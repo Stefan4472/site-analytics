@@ -4,29 +4,16 @@ from . import location_lookup
 from . import hostname_lookup
 
 
+# TODO: MAKE INTO NAMEDTUPLE
 @dc.dataclass
 class User:
     user_id: int
     ip_address: str
-    location: str = 'UNKNOWN'
-    city: str = 'UNKNOWN'
-    hostname: str = 'UNKNOWN'
-
-    def lookup_location(self):
-        """Use the set ip_address to set location."""
-        # TODO
-        self.location = 'UNKOWN'
-
-    def lookup_hostname(self):
-        return
-
-    def on_session_finished(
-            self, 
-            user_session: session.Session,
-    ):
-        print(location_lookup.location_from_ip(self.ip_address))
-        print(hostname_lookup.hostname_from_ip(self.ip_address))
-        print(classify_user(self, user_session))
+    hostname: str
+    domain: str
+    city: str
+    region: str
+    country: str
 
 
 # TODO: NARROW THE LIST? SEE HOW WELL THE "REQUESTS-PER-SECOND" METRIC WORKS

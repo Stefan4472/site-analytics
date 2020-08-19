@@ -1,7 +1,6 @@
 import os
 import click
 import datetime
-# import atexit
 from flask import Flask, current_app, g
 from flask.cli import with_appcontext
 from . import database_context
@@ -19,8 +18,6 @@ def create_app():
     app.config.from_mapping(
         SECRET_KEY='dev',
         DATABASE_PATH=os.path.join(app.instance_path, 'site-traffic.sqlite'),
-        ACTIVE_SESSIONS={},
-        NEXT_SESSION_REFRESH=datetime.datetime.now(),
     )
 
     # Load the instance config, if it exists, when not testing
@@ -44,9 +41,6 @@ def init_app(app):
     app.teardown_appcontext(database_context.close_db)
     # Register `Click` commands
     app.cli.add_command(init_db_command)
-    # Commit active session data when app exits
-    # NOTE: Flask complains about this. TODO: HOW TO DO THIS PROPERLY?
-    # atexit.register(backend.commit_active_sessions)
 
 
 @click.command('init-db')

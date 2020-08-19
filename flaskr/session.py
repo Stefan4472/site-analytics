@@ -29,7 +29,6 @@ class Session:
     ):
         self.num_requests += 1
         self.last_request_time = view_time
-        self.is_active()
 
     def is_active(
             self,
