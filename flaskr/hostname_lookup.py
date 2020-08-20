@@ -18,8 +18,9 @@ def hostname_from_ip(
 
 
 def domain_from_hostname(hostname):
-    if hostname == 'UNKNOWN' or not hostname:
+    if not hostname or hostname == 'UNKNOWN':
         return 'UNKNOWN'
-
+    if not '.' in hostname:
+        return hostname
     segments = hostname.split('.')
     return segments[-2] + '.' + segments[-1]

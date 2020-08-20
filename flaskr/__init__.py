@@ -41,7 +41,8 @@ def init_app(app):
     app.teardown_appcontext(database_context.close_db)
     # Register `Click` commands
     app.cli.add_command(init_db_command)
-    app.cli.add_command(cleanup_session_cache_command)
+    app.cli.add_command(process_cached_sessions_command)
+    app.cli.add_command(cleanup_cached_sessions_command)
 
 
 @click.command('init-db')
@@ -52,9 +53,16 @@ def init_db_command():
     click.echo('Initialized the database.')
 
 
-@click.command('cleanup-session-cache')
+@click.command('process-cached-sessions')
 @with_appcontext
-def cleanup_session_cache_command():
+def process_cached_sessions_command():
+    backend.process_cached_sessions()
+
+
+@click.command('cleanup-cached-sessions')
+@with_appcontext
+def cleanup_cached_sessions_command():
     rows_deleted = \
-        database_context.get_db().cleanup_session_cache(commit=True)
+        database_context.get_db().cleanup_cached_sessions(commit=True)
     click.echo('Deleted {} stale records'.format(rows_deleted))
+

@@ -14,6 +14,8 @@ class User:
     city: str
     region: str
     country: str
+    classification: str
+    was_processed: bool
 
 
 # TODO: NARROW THE LIST? SEE HOW WELL THE "REQUESTS-PER-SECOND" METRIC WORKS
@@ -32,6 +34,7 @@ BOT_KEYWORDS = [
     'comcastbusiness',
     'dataprovider',
 ]
+
 
 def classify_user(
         user: User,

@@ -62,6 +62,8 @@ class Database:
                 user_data['_city'],
                 user_data['_region'],
                 user_data['_country'],
+                user_data['_was_processed'],
+                user_data['_classification'],
             )
 
     def get_user_by_id(
@@ -82,6 +84,8 @@ class Database:
                 user_data['_city'],
                 user_data['_region'],
                 user_data['_country'],
+                user_data['_was_processed'],
+                user_data['_classification'],
             )
 
     def update_user(
@@ -94,8 +98,10 @@ class Database:
                 '_hostname = ?,' \
                 '_domain = ?,' \
                 '_city = ?,' \
-                '_region = ? ' \
-                '_country = ? ' \
+                '_region = ?, ' \
+                '_country = ?, ' \
+                '_was_processed = ?, ' \
+                '_classification = ? ' \
                 'where _user_id = ?'
         values = (
             user.hostname,
@@ -104,6 +110,8 @@ class Database:
             user.region,
             user.country,
             user.user_id,
+            int(user.was_processed),
+            user.classification,
         )
         self.cur.execute(command, values)
         if commit:
@@ -243,7 +251,15 @@ class Database:
         if commit:
             self.commit()
 
-    def cleanup_session_cache(
+    def gen_all_cached_sessions(
+            self,
+    ) -> typing.Generator[session.Session, None, None]:
+        """TODO: NOTE: THE CURRENT WAY WE DO THIS IS PRETTY INEFFICIENT."""
+        command = 'select * from _CachedSessions'
+        for cached_session in self.cur.execute(command).fetchall():
+            yield self.get_session_by_id(cached_session['_session_id'])
+
+    def cleanup_cached_sessions(
             self,
             commit: bool = False,
     ) -> int:

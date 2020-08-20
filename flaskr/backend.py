@@ -4,8 +4,11 @@ import pathlib
 from flask import Blueprint, g, current_app, request, Response
 from . import database
 from . import database_context
-from . import user
-from . import session
+from . import user as us
+from . import session as se
+from . import hostname_lookup
+from . import location_lookup
+
 
 # Plan of attack:
 # 1. Get extremely simple 'post' API working that just logs traffic (as I had already done)
@@ -32,7 +35,7 @@ blueprint = Blueprint('backend', __name__)
 
 def get_or_create_user(
         ip_address: str,
-) -> user.User:
+) -> us.User:
     db = database_context.get_db()
     user = db.get_user(ip_address)
     if user:
@@ -44,9 +47,9 @@ def get_or_create_user(
 
 
 def get_or_create_session(
-        user: user.User,
+        user: us.User,
         request_time: datetime.datetime,
-) -> session.Session:
+) -> se.Session:
     # Check if user has a cached session
     db = database_context.get_db()
     cached_session = db.lookup_cached_session(user.user_id)
@@ -69,6 +72,36 @@ def get_or_create_session(
         db.add_session_to_cache(session)
         db.commit()
         return session
+
+
+def process_user(
+        user: us.User,
+        session: se.Session,
+) -> us.User:
+    print('Processing user with id {}'.format(user.user_id))
+    hostname = hostname_lookup.hostname_from_ip(user.ip_address)
+    location = location_lookup.location_from_ip(user.ip_address)
+
+    user.hostname = hostname
+    user.domain = hostname_lookup.domain_from_hostname(hostname)
+    user.city = location.city
+    user.region = location.region_name
+    user.country = location.country_name
+    user.classification = us.classify_user(user, session)
+    user.was_processed = True
+    return user  # TODO: DO WE NEED TO RETURN IT?
+
+
+def process_cached_sessions():
+    db = database_context.get_db()
+    for session in db.gen_all_cached_sessions():
+        # Get associated user
+        user = db.get_user_by_id(session.user_id)
+        if not user.was_processed:
+            user = process_user(user, session)
+            print(user)
+            db.update_user(user)
+    db.commit()
 
 
 # A simple page that says hello

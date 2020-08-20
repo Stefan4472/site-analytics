@@ -13,6 +13,8 @@ create table _Users(
     _city text default "UNKOWN",
     _region text default "UNKOWN",
     _country text default "UNKOWN",
+    _classification text default "USER",
+    _was_processed integer default 0,
     unique(_ip_address)
 );
 
