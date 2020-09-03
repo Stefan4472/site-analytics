@@ -10,14 +10,10 @@ from . import hostname_lookup
 from . import location_lookup
 
 
-# Plan of attack:
-# 1. Get extremely simple 'post' API working that just logs traffic (as I had already done)
-# 2. Record data to a simple SQLite database, rather than a .txt file
-# 3. Implement tracking of sessions
-# 4. Implement classifications of sessions
-# 5. Implement plotting of analytics via API
+# TODO: SEND A 'WEEKLY REPORT' EMAIL
 
 # Currently, users are defined by their IP address.
+# TODO: DEFINE BY (IP_ADDRESS, USER_AGENT)
 # A session is defined by a user IP address and start time.
 # Flow:
 # - Look up IP address to get the user. Create new user if not exists
@@ -133,58 +129,49 @@ def hello():
     print()
     return 'Hello, World!'
 
-"""
-def get_session(ip_addr: str):
-    existing_session = app.config['active_sessions_by_ip'].get(ip_addr)
-    # Create session
-    if existing_session is None:
-        print('Creating new session')
-        new_session = session.Session(
-            ip_addr, 
-            session_id=app.config['next_session_id'],
-        )
-        app.config['next_session_id'] += 1
-        app.config['active_sessions_by_ip'][ip_addr] = new_session
-        return new_session
-    # Session exists
-    else:
-        return existing_session
-
-@blueprint.route('/', methods=['GET'])
-def hello_world():
-    return Response(status=200)
-
 # TODO: AUTHENTICATION, 'USER KEYS'
-# FOR NOW, JUST GET THIS LOGGING TRAFFIC TO A FILE
 @blueprint.route('/report_traffic', methods=['POST'])
 def report_traffic():
     url = request.args['url']
-    ip_addr = request.args['ip_addr']
+    user_ip = request.args['ip_addr']
     user_agent = request.args['user_agent']
     # TODO: TAKE TIMESTAMP
+    request_time = datetime.datetime.now()
+
     print('Got "report_traffic" with args "{}", "{}", "{}"'.format(
-        url, ip_addr, user_agent))
+            url, user_ip, user_agent)
+    )
+
+    # TODO: THESE STRINGS NEED TO BE CHECKED BEFORE WRITING TO DATABASE
+
     # Return error if parameters haven't been specified
-    if not (url and ip_addr and user_agent):
+    if not (url and user_ip and user_agent):
         print('Error: missing required parameter(s)')
         return Response(status=400)
-       
-    session = get_session(ip_addr)
-    print(session)
 
     # Write to log file
-    with open('log.txt', 'a') as log_file:
+    with open(current_app.config['LOG_PATH'], 'a') as log_file:
         log_file.write('{},{},{},{}\n'.format(
-            datetime.datetime.now(), 
+            request_time, 
             url, 
-            ip_addr, 
+            user_ip, 
             user_agent,
         ))
 
-    # TODO: THESE STRINGS NEED TO BE CHECKED BEFORE WRITING TO DATABASE
-    # Write to database
-    app.config['db'].record_view(url, ip_addr, user_agent)
+    user = get_or_create_user(user_ip)
+    session = get_or_create_session(user, request_time)
+    session.record_request(request_time)
 
-    # Return success
+    print(user)
+    print(session)
+
+    # Record the view and update the session
+    db = database_context.get_db()
+    db.record_view(session, request_time, url, user_agent)
+    db.update_session(session)
+    db.commit()
+
+    for view_record in db.cur.execute('select * from _Views').fetchall():
+        print(*view_record)
+    print()
     return Response(status=200)
-"""

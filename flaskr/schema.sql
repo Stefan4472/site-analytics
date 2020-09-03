@@ -19,7 +19,6 @@ create table _Users(
 );
 
 --TODO: ADD _IS_COMPLETE (BOOL) ATTRIBUTE
---TODO: DEFAULT VALUES
 create table _Sessions(
     _session_id integer primary key autoincrement,
     _user_id integer not null,
@@ -31,9 +30,11 @@ create table _Sessions(
 );
 
 -- TODO: MOVE 'USER_AGENT' INTO THE SESSIONS TABLE? / MAKE IT PART OF WHAT DEFINES A NEW SESSION?
+-- TODO: DETERMINE OPERATING SYSTEM, WEB BROWSER, VERSION
 create table _Views(
     _view_id integer primary key autoincrement,
     _session_id integer not null,
+    _user_id integer not null,
     _timestamp datetime not null,
     _url text not null,
     _user_agent text not null

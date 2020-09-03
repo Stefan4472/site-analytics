@@ -206,8 +206,17 @@ class Database:
             user_agent: str,
             commit: bool = False,
     ):
-        query = 'insert into _Views values (NULL, ?, ?, ?, ?)'
-        values = (session.session_id, timestamp, viewed_url, user_agent)
+        query = \
+            'insert into _Views' \
+                '(_session_id, _user_id, _timestamp, _url, _user_agent) ' \
+                'values (?, ?, ?, ?, ?)'
+        values = (
+            session.session_id, 
+            session.user_id, 
+            timestamp, 
+            viewed_url, 
+            user_agent,
+        )
         self.cur.execute(query, values)
         if commit:
             self.commit()

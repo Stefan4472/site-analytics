@@ -1,7 +1,9 @@
 import datetime
 import typing
 
-MAX_INACTIVE_TIME_SEC = 10
+# Session becomes inactive after `MAX_INACTIVE_TIME_SEC`
+# without a new request.
+MAX_INACTIVE_TIME_SEC = 600
 
 
 class Session:

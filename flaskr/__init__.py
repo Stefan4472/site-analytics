@@ -18,6 +18,7 @@ def create_app():
     app.config.from_mapping(
         SECRET_KEY='dev',
         DATABASE_PATH=os.path.join(app.instance_path, 'site-traffic.sqlite'),
+        LOG_PATH=os.path.join(app.instance_path, 'traffic-log.csv'),
     )
 
     # Load the instance config, if it exists, when not testing
