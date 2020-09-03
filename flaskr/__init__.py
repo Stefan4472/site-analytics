@@ -1,10 +1,12 @@
 import os
 import click
 import datetime
+import pathlib
 from flask import Flask, current_app, g
 from flask.cli import with_appcontext
 from . import database_context
 from . import backend
+from . import secret
 
 
 def create_app():
@@ -13,10 +15,21 @@ def create_app():
     Starter code from https://flask.palletsprojects.com/en/1.1.x/tutorial/
     """
     app = Flask(__name__, instance_relative_config=True)
+
+    secret_path = os.path.join(app.instance_path, 'secret.txt')
+    try:
+        secret_key = secret.load_secret_key(pathlib.Path(secret_path))
+    except OSError as e:
+        print(
+            'WARNING: Couldn\'t read secret file "{}". Using default secret ' \
+                'key "{}"'.format(secret_path, secret.DEFAULT_SECRET_KEY)
+        )
+        secret_key = secret.DEFAULT_SECRET_KEY
+
     # Setup `current_app` config
     # TODO: BETTER WAY TO CACHE `ACTIVE_SESSIONS`?
     app.config.from_mapping(
-        SECRET_KEY='dev',
+        SECRET_KEY=secret_key,
         DATABASE_PATH=os.path.join(app.instance_path, 'site-traffic.sqlite'),
         LOG_PATH=os.path.join(app.instance_path, 'traffic-log.csv'),
     )

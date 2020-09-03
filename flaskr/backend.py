@@ -129,25 +129,36 @@ def hello():
     print()
     return 'Hello, World!'
 
-# TODO: AUTHENTICATION, 'USER KEYS'
+
 @blueprint.route('/report_traffic', methods=['POST'])
 def report_traffic():
+    # Check 'secret' key
+    if 'secret' not in request.args:
+        return Response('Missing "secret" arg', status=400)
+    if request.args['secret'] != current_app.config['SECRET_KEY']:
+        return Response('Invalid "secret" key provided', status=403)
+    else:
+        print('Validated API key')
+    # Ensure all other args are present
+    if 'url' not in request.args:
+        return Response('Missing "url" arg', status=400)
+    if 'ip_addr' not in request.args:
+        return Response('Missing "ip_addr" arg', status=400)
+    if 'user_agent' not in request.args:
+        return Response('Missing "user_agent" arg', status=400)
+
     url = request.args['url']
     user_ip = request.args['ip_addr']
     user_agent = request.args['user_agent']
+    secret_key = request.args['secret']
     # TODO: TAKE TIMESTAMP
     request_time = datetime.datetime.now()
 
-    print('Got "report_traffic" with args "{}", "{}", "{}"'.format(
-            url, user_ip, user_agent)
+    print('Got "report_traffic" with args "{}", "{}", "{}", secret="{}"'.format(
+            url, user_ip, user_agent, secret_key)
     )
 
-    # TODO: THESE STRINGS NEED TO BE CHECKED BEFORE WRITING TO DATABASE
-
-    # Return error if parameters haven't been specified
-    if not (url and user_ip and user_agent):
-        print('Error: missing required parameter(s)')
-        return Response(status=400)
+    # TODO: THESE STRINGS NEED TO BE ESCAPED BEFORE WRITING TO DATABASE
 
     # Write to log file
     with open(current_app.config['LOG_PATH'], 'a') as log_file:
@@ -171,7 +182,7 @@ def report_traffic():
     db.update_session(session)
     db.commit()
 
-    for view_record in db.cur.execute('select * from _Views').fetchall():
+    for view_record in db.cur.execute('select * from _Users').fetchall():
         print(*view_record)
     print()
     return Response(status=200)
