@@ -62,8 +62,8 @@ class Database:
                 user_data['_city'],
                 user_data['_region'],
                 user_data['_country'],
-                user_data['_was_processed'],
                 user_data['_classification'],
+                user_data['_was_processed'],
             )
 
     def get_user_by_id(
@@ -84,8 +84,8 @@ class Database:
                 user_data['_city'],
                 user_data['_region'],
                 user_data['_country'],
-                user_data['_was_processed'],
                 user_data['_classification'],
+                user_data['_was_processed'],
             )
 
     def update_user(
@@ -100,8 +100,8 @@ class Database:
                 '_city = ?,' \
                 '_region = ?, ' \
                 '_country = ?, ' \
-                '_was_processed = ?, ' \
                 '_classification = ? ' \
+                '_was_processed = ?, ' \
                 'where _user_id = ?'
         values = (
             user.hostname,
@@ -109,9 +109,9 @@ class Database:
             user.city,
             user.region,
             user.country,
-            user.user_id,
-            int(user.was_processed),
             user.classification,
+            int(user.was_processed),
+            user.user_id,
         )
         self.cur.execute(command, values)
         if commit:
@@ -278,10 +278,10 @@ class Database:
         command = 'select * from _CachedSessions where _certified_stale = ?'
         values = (0,)
         for active_record in self.cur.execute(command, values).fetchall():
-            print('Found active session {}'.format(active_record['_session_id']))
+            print('Found cached session {}'.format(active_record['_session_id']))
             session = self.get_session_by_id(active_record['_session_id'])
             if not session.is_active():
-                print('Found an inactive session (id={})'.format(session.session_id))
+                print('Session is inactive (id={})'.format(session.session_id))
                 self.update_cached_session(session, is_stale=True)
         # Count number of stale records
         count_command = \

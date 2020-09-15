@@ -186,3 +186,8 @@ def report_traffic():
         print(*view_record)
     print()
     return Response(status=200)
+
+
+@blueprint.route('/query', methods=['GET']):
+def query():
+    return Response(status=200)
