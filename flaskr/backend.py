@@ -95,7 +95,6 @@ def process_cached_sessions():
         user = db.get_user_by_id(session.user_id)
         if not user.was_processed:
             user = process_user(user, session)
-            print(user)
             db.update_user(user)
     db.commit()
 
@@ -123,10 +122,6 @@ def hello():
     db.update_session(session)
     db.commit()
 
-    all_cached = db.cur.execute('select * from _CachedSessions').fetchall()
-    for c in all_cached:
-        print(*c)
-    print()
     return 'Hello, World!'
 
 
@@ -137,8 +132,7 @@ def report_traffic():
         return Response('Missing "secret" arg', status=400)
     if request.args['secret'] != current_app.config['SECRET_KEY']:
         return Response('Invalid "secret" key provided', status=403)
-    else:
-        print('Validated API key')
+
     # Ensure all other args are present
     if 'url' not in request.args:
         return Response('Missing "url" arg', status=400)
@@ -173,21 +167,15 @@ def report_traffic():
     session = get_or_create_session(user, request_time)
     session.record_request(request_time)
 
-    print(user)
-    print(session)
-
     # Record the view and update the session
     db = database_context.get_db()
     db.record_view(session, request_time, url, user_agent)
     db.update_session(session)
     db.commit()
 
-    for view_record in db.cur.execute('select * from _Users').fetchall():
-        print(*view_record)
-    print()
     return Response(status=200)
 
 
-@blueprint.route('/query', methods=['GET']):
+@blueprint.route('/query', methods=['GET'])
 def query():
     return Response(status=200)
