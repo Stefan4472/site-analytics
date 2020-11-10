@@ -1,6 +1,7 @@
 import typing
 import datetime
 import pathlib
+import json
 from flask import Blueprint, g, current_app, request, Response
 from . import database
 from . import database_context
@@ -99,32 +100,6 @@ def process_cached_sessions():
     db.commit()
 
 
-# A simple page that says hello
-@blueprint.route('/hello')
-def hello():
-    user_ip = request.environ.get(
-        'HTTP_X_FORWARDED_FOR', request.environ['REMOTE_ADDR']
-    )
-    request_time = datetime.datetime.now()
-    url = '/hello'
-    user_agent = 'firefox'
-
-    user = get_or_create_user(user_ip)
-    session = get_or_create_session(user, request_time)
-    session.record_request(request_time)
-
-    print(user)
-    print(session)
-
-    # Record the view and update the session
-    db = database_context.get_db()
-    db.record_view(session, request_time, url, user_agent)
-    db.update_session(session)
-    db.commit()
-
-    return 'Hello, World!'
-
-
 @blueprint.route('/report_traffic', methods=['POST'])
 def report_traffic():
     # Check 'secret' key
@@ -176,6 +151,76 @@ def report_traffic():
     return Response(status=200)
 
 
+def parse_date(date_str: str) -> datetime.date:
+    """Parses a string date in format YYYY-MM-DD."""
+    return datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+
+
 @blueprint.route('/query', methods=['GET'])
 def query():
-    return Response(status=200)
+    """Execute simple query (early stage of development).
+
+    Args required:
+    - secret key ("secret")
+    - start_date inclusive ("start_date", "YYYY-MM-DD")
+    - end_date inclusive ("end_date", "YYYY-MM-DD")
+
+    Optional args:
+    - interval ("interval", [num days])
+    """
+    # Check 'secret' key
+    if 'secret' not in request.args:
+        return Response('Missing "secret" arg', status=400)
+    if request.args['secret'] != current_app.config['SECRET_KEY']:
+        return Response('Invalid "secret" key provided', status=403)
+
+    # Ensure all other args are present
+    if 'start_date' not in request.args:
+        return Response('Missing "start_date" arg', status=400)
+    start_date = parse_date(request.args['start_date'])
+    if 'end_date' not in request.args:
+        return Response('Missing "end_date" arg', status=400)
+    end_date = parse_date(request.args['end_date'])
+    
+    db = database_context.get_db()
+
+    # TODO: BETTER HANDLING OF DIFFERENCE
+    if 'interval' in request.args:
+        interval_days = int(request.args['interval'])
+        json_results = []
+
+        # TODO: FIGURE OUT HOW DATES TRANSLATE TO DATETIMES--i.e., MIDNIGHT ON WHICH DAY?
+        # Query on each interval
+        interval_start = start_date
+        while interval_start < end_date:
+            interval_end = interval_start + datetime.timedelta(
+                days=interval_days,
+            )
+            if interval_end > end_date:
+                interval_end = end_date
+
+            num_hits = db.count_hits_in_range(
+                interval_start,
+                interval_end,
+            )[0]
+
+            json_results.append({
+                'start_date': str(interval_start),
+                'end_date': str(interval_end),
+                'hits': num_hits,
+            })
+            
+            interval_start = interval_end
+        return json.dumps(json_results)
+    else:
+        num_hits = db.count_hits_in_range(
+            start_date,
+            end_date,
+        )[0]
+
+        return json.dumps({
+            'start_date': str(start_date),
+            'end_date': str(end_date),
+            'hits': num_hits,
+        })
+    

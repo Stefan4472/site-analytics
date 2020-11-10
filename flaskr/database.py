@@ -100,7 +100,7 @@ class Database:
                 '_city = ?,' \
                 '_region = ?, ' \
                 '_country = ?, ' \
-                '_classification = ? ' \
+                '_classification = ?, ' \
                 '_was_processed = ?, ' \
                 'where _user_id = ?'
         values = (
@@ -296,3 +296,20 @@ class Database:
         if commit:
             self.commit()
         return rows_deleted
+
+    '''Start analytics functions '''
+
+    def count_hits_in_range(
+            self,
+            start_date: datetime.date,
+            end_date_incl: datetime.date,
+    ) -> int:
+        command = \
+            'select count(*) from ' \
+                '_Views v, _Users u on v._user_id = u._user_id ' \
+                'where _classification = ? and ' \
+                    '_timestamp >= ? and ' \
+                    '_timestamp <= ?'
+        values = ('USER', start_date, end_date_incl)
+        return self.cur.execute(command, values).fetchone()
+
