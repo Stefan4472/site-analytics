@@ -4,7 +4,7 @@ drop table if exists _Sessions;
 drop table if exists _Views;
 drop table if exists _CachedSessions;
 
---TODO: CLASSIFICATION ENUM (BOT, ME, OTHER)
+--TODO: SIMPLIFY TO `IS_BOT`: BOOLEAN
 create table _Users(
     _user_id integer primary key autoincrement,
     _ip_address text not null,

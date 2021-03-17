@@ -1,7 +1,5 @@
 import dataclasses as dc
 from . import session
-from . import location_lookup
-from . import hostname_lookup
 
 
 # TODO: MAKE INTO NAMEDTUPLE

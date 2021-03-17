@@ -2,11 +2,11 @@ import typing
 import datetime
 import pathlib
 import json
-from flask import Blueprint, g, current_app, request, Response
-from . import database
+from flask import Blueprint, g, current_app, request, Response, jsonify
+from analyticsdb import database
+from analyticsdb import user as us
+from analyticsdb import session as se
 from . import database_context
-from . import user as us
-from . import session as se
 from . import hostname_lookup
 from . import location_lookup
 
@@ -223,4 +223,11 @@ def query():
             'end_date': str(end_date),
             'hits': num_hits,
         })
-    
+
+
+@blueprint.route('/get')
+def get_data():
+    query = 'SELECT _classification, COUNT(*) FROM _Users GROUP BY _classification'
+    res = database_context.get_db().cur.execute(query)
+    _json = [{row[0]: row[1]} for row in res.fetchall()]
+    return jsonify(_json)
