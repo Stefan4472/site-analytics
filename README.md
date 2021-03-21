@@ -13,6 +13,7 @@ Install the required packages for the Flask instance:
 ```
 cd flaskr
 pip install flask
+pip install flask-login
 pip install dataclasses
 ```
 

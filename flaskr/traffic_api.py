@@ -1,29 +1,26 @@
-import typing
 import datetime
-import pathlib
-import json
-from flask import Blueprint, g, current_app, request, Response, jsonify
-from analyticsdb import database
+from flask import Blueprint, current_app, request, Response
+from flask_login import login_required
 from analyticsdb import user as us
 from analyticsdb import session as se
 from . import database_context
 from . import hostname_lookup
 from . import location_lookup
+'''
+TODO: SEND A 'WEEKLY REPORT' EMAIL? (Or move that to a different service?)
 
-
-# TODO: SEND A 'WEEKLY REPORT' EMAIL
-
-# Currently, users are defined by their IP address.
-# TODO: DEFINE BY (IP_ADDRESS, USER_AGENT)
-# A session is defined by a user IP address and start time.
-# Flow:
-# - Look up IP address to get the user. Create new user if not exists
-# - Look up user in `active_sessions`. Update active session if exists,
-# else create and add to `active_sessions`
-# - Create new View record, using the active session
-# - Update `active_sessions`. For those that have expired, analyze them
-# and save their updated values to the database. Use them to classify their
-# corresponding users  
+Currently, users are defined by their IP address.
+TODO: DEFINE BY (IP_ADDRESS, USER_AGENT)
+A session is defined by a user IP address and start time.
+Flow:
+- Look up IP address to get the user. Create new user if not exists
+- Look up user in `active_sessions`. Update active session if exists,
+else create and add to `active_sessions`
+- Create new View record, using the active session
+- Update `active_sessions`. For those that have expired, analyze them
+and save their updated values to the database. Use them to classify their
+corresponding users  
+'''
 
 
 # Create blueprint, which will be used to register URL routes
@@ -101,13 +98,8 @@ def process_cached_sessions():
 
 
 @blueprint.route('/report_traffic', methods=['POST'])
+@login_required
 def report_traffic():
-    # Check 'secret' key
-    if 'secret' not in request.args:
-        return Response('Missing "secret" arg', status=400)
-    if request.args['secret'] != current_app.config['SECRET_KEY']:
-        return Response('Invalid "secret" key provided', status=403)
-
     # Ensure all other args are present
     if 'url' not in request.args:
         return Response('Missing "url" arg', status=400)
@@ -119,16 +111,9 @@ def report_traffic():
     url = request.args['url']
     user_ip = request.args['ip_addr']
     user_agent = request.args['user_agent']
-    secret_key = request.args['secret']
-    # TODO: TAKE TIMESTAMP
     request_time = datetime.datetime.now()
 
-    print('Got "report_traffic" with args "{}", "{}", "{}", secret="{}"'.format(
-            url, user_ip, user_agent, secret_key)
-    )
-
     # TODO: THESE STRINGS NEED TO BE ESCAPED BEFORE WRITING TO DATABASE
-
     # Write to log file
     with open(current_app.config['LOG_PATH'], 'a') as log_file:
         log_file.write('{},{},{},{}\n'.format(
@@ -149,77 +134,3 @@ def report_traffic():
     db.commit()
 
     return Response(status=200)
-
-
-def parse_date(date_str: str) -> datetime.date:
-    """Parses a string date in format YYYY-MM-DD."""
-    return datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
-
-
-@blueprint.route('/query', methods=['GET'])
-def query():
-    """Execute simple query (early stage of development).
-
-    Args required:
-    - secret key ("secret")
-    - start_date inclusive ("start_date", "YYYY-MM-DD")
-    - end_date inclusive ("end_date", "YYYY-MM-DD")
-
-    Optional args:
-    - interval ("interval", [num days])
-    """
-    # Check 'secret' key
-    if 'secret' not in request.args:
-        return Response('Missing "secret" arg', status=400)
-    if request.args['secret'] != current_app.config['SECRET_KEY']:
-        return Response('Invalid "secret" key provided', status=403)
-
-    # Ensure all other args are present
-    if 'start_date' not in request.args:
-        return Response('Missing "start_date" arg', status=400)
-    start_date = parse_date(request.args['start_date'])
-    if 'end_date' not in request.args:
-        return Response('Missing "end_date" arg', status=400)
-    end_date = parse_date(request.args['end_date'])
-    
-    db = database_context.get_db()
-
-    # TODO: BETTER HANDLING OF DIFFERENCE
-    if 'interval' in request.args:
-        interval_days = int(request.args['interval'])
-        json_results = []
-
-        # TODO: FIGURE OUT HOW DATES TRANSLATE TO DATETIMES--i.e., MIDNIGHT ON WHICH DAY?
-        # Query on each interval
-        interval_start = start_date
-        while interval_start < end_date:
-            interval_end = interval_start + datetime.timedelta(
-                days=interval_days,
-            )
-            if interval_end > end_date:
-                interval_end = end_date
-
-            num_hits = db.count_hits_in_range(
-                interval_start,
-                interval_end,
-            )[0]
-
-            json_results.append({
-                'start_date': str(interval_start),
-                'end_date': str(interval_end),
-                'hits': num_hits,
-            })
-            
-            interval_start = interval_end
-        return json.dumps(json_results)
-    else:
-        num_hits = db.count_hits_in_range(
-            start_date,
-            end_date,
-        )[0]
-
-        return json.dumps({
-            'start_date': str(start_date),
-            'end_date': str(end_date),
-            'hits': num_hits,
-        })

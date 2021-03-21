@@ -1,9 +1,9 @@
 import os
 import click
-import datetime
 import pathlib
-from flask import Flask, current_app, g
+from flask import Flask
 from flask.cli import with_appcontext
+from . import auth
 from . import database_context
 from . import traffic_api
 from . import data_api
@@ -16,6 +16,7 @@ def create_app():
     Starter code from https://flask.palletsprojects.com/en/1.1.x/tutorial/
     """
     app = Flask(__name__, instance_relative_config=True)
+    auth.login_manager.init_app(app)
 
     secret_path = os.path.join(app.instance_path, 'secret.txt')
     try:

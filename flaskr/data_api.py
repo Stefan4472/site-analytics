@@ -1,4 +1,5 @@
 from flask import Blueprint, request, Response, jsonify
+from flask_login import login_required
 from . import database_context as db_context
 from . import argparser
 
@@ -9,6 +10,7 @@ blueprint = Blueprint('data', __name__, url_prefix='/api/v1/data')
 
 # TODO: MAKE INTERVALS OPTIONAL AND VARIABLE
 @blueprint.route('/unique-ips-per-week')
+@login_required
 def get_unique_ips_per_week():
     """Number of unique IP addresses by-user and by-bot, per week."""
     try:
@@ -25,6 +27,7 @@ def get_unique_ips_per_week():
 
 
 @blueprint.route('/views-per-week')
+@login_required
 def get_views_per_week():
     """Number of views by-user and by-bot, per week."""
     try:
@@ -41,6 +44,7 @@ def get_views_per_week():
 
 
 @blueprint.route('/countries')
+@login_required
 def get_countries():
     """Views per country."""
     try:
@@ -58,6 +62,7 @@ def get_countries():
 
 
 @blueprint.route('/cities')
+@login_required
 def get_cities():
     """Views per city."""
     try:
@@ -75,6 +80,7 @@ def get_cities():
 
 
 @blueprint.route('/urls')
+@login_required
 def get_urls():
     """Views per URL."""
     try:
@@ -92,6 +98,7 @@ def get_urls():
 
 
 @blueprint.route('/hostnames')
+@login_required
 def get_hostnames():
     """Views by hostname."""
     try:
