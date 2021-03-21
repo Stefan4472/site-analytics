@@ -24,7 +24,7 @@ corresponding users
 
 
 # Create blueprint, which will be used to register URL routes
-blueprint = Blueprint('traffic', __name__)
+blueprint = Blueprint('traffic', __name__, url_prefix='/api/v1/traffic')
 
 
 def get_or_create_user(
@@ -97,7 +97,7 @@ def process_cached_sessions():
     db.commit()
 
 
-@blueprint.route('/report_traffic', methods=['POST'])
+@blueprint.route('/', methods=['POST'])
 @login_required
 def report_traffic():
     # Ensure all other args are present

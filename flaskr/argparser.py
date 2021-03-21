@@ -80,6 +80,9 @@ def parse_args(
         else:
             raise ParseException('classification is invalid')
 
+    if 'start_date' in args and 'end_date' in args and parsed_end_date <= parsed_start_date:
+        raise ParseException('end_date must be later than start_date')
+
     return RequestArgs(
         start_date=parsed_start_date,
         end_date=parsed_end_date,

@@ -1,10 +1,13 @@
 import requests
 import datetime
 import matplotlib.pyplot as plt
-
+'''
+Makes a request and plots the results.
+Super quickly coded and will need to be revisited.
+'''
 
 # params = {'url': '/', 'ip_addr': '127.0.0.1', 'user_agent': 'Firefox'}
-# r = requests.post('http://127.0.0.1:5001/report_traffic', params=params)
+# r = requests.post('http://127.0.0.1:5000/report_traffic', params=params)
 
 
 def parse_timeboxed_data(_json) -> ([datetime.datetime], [int], [int]):
@@ -39,10 +42,17 @@ def make_plot(
     return fig
 
 
+# Make request, providing auth key
 params = {'start_date': '2020-10-10', 'end_date': '2021-3-15'}
-r = requests.get('http://127.0.0.1:5000/api/v1/data/unique-users-per-week', params=params)
-dates, user_data, bot_data = parse_timeboxed_data(r.json())
+r = requests.get(
+    'http://127.0.0.1:5000/api/v1/data/unique-ips-per-week',
+    headers={'Authorization': 'dev'},
+    params=params,
+)
+if r.status_code == 401:
+    raise ValueError('Authentication failed')
 
+dates, user_data, bot_data = parse_timeboxed_data(r.json())
 fig = make_plot(dates, user_data, bot_data, 'Unique IP Addresses per Week', x_label='Week')
 fig.show()
 

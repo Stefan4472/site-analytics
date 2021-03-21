@@ -22,8 +22,8 @@ def close_db(e=None):
         db.close()
 
 
-def init_db():
+def init_db(schemapath: str):
     """Initialize the database instance."""
     db = get_db()
-    with current_app.open_resource('schema.sql') as f:
-        db.execute_script(f.read().decode('utf8'))
+    with open(schemapath) as f:
+        db.execute_script(f.read())

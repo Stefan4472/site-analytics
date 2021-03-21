@@ -11,10 +11,7 @@ from . import secret
 
 
 def create_app():
-    """Create and configure the app.
-
-    Starter code from https://flask.palletsprojects.com/en/1.1.x/tutorial/
-    """
+    """Create and configure the Flask app."""
     app = Flask(__name__, instance_relative_config=True)
     auth.login_manager.init_app(app)
 
@@ -22,11 +19,10 @@ def create_app():
     try:
         secret_key = secret.load_secret_key(pathlib.Path(secret_path))
     except OSError as e:
-        print(
-            'WARNING: Couldn\'t read secret file "{}". Using default secret ' \
-                'key "{}"'.format(secret_path, secret.DEFAULT_SECRET_KEY)
-        )
-        secret_key = secret.DEFAULT_SECRET_KEY
+        # TODO: SET UP LOGGING
+        err = 'WARNING: Couldn\'t read secret file "{}". Using default secret ' \
+            'key "{}"'.format(secret_path, secret.DEFAULT_SECRET_KEY)
+        raise ValueError(err)
 
     # Setup `current_app` config
     # TODO: BETTER WAY TO CACHE `ACTIVE_SESSIONS`?
@@ -57,18 +53,18 @@ def init_app(app):
     # Register `close_db()` on app teardown (end-of-request)
     app.teardown_appcontext(database_context.close_db)
     # Register `Click` commands
-    # app.cli.add_command(init_db_command)
+    app.cli.add_command(init_db_command)
     app.cli.add_command(process_cached_sessions_command)
     app.cli.add_command(cleanup_cached_sessions_command)
 
 
-# TODO: THIS NO LONGER WORKS BECAUSE THE SCHEMA HAS BEEN MOVED TO A DIFFERENT FOLDER
-# @click.command('init-db')
-# @with_appcontext
-# def init_db_command():
-#     """Re-initialize the database with the schema."""
-#     database_context.init_db()
-#     click.echo('Initialized the database.')
+@click.command('init-db')
+@click.argument('schemapath', type=click.Path(exists=True, readable=True))
+@with_appcontext
+def init_db_command(schemapath: str):
+    """Create the database, using the schema at the path provided."""
+    database_context.init_db(schemapath)
+    click.echo('Initialized the database.')
 
 
 @click.command('process-cached-sessions')
