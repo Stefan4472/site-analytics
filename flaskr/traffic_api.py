@@ -27,7 +27,7 @@ from . import location_lookup
 
 
 # Create blueprint, which will be used to register URL routes
-blueprint = Blueprint('backend', __name__)
+blueprint = Blueprint('traffic', __name__)
 
 
 def get_or_create_user(
@@ -223,11 +223,3 @@ def query():
             'end_date': str(end_date),
             'hits': num_hits,
         })
-
-
-@blueprint.route('/get')
-def get_data():
-    query = 'SELECT _classification, COUNT(*) FROM _Users GROUP BY _classification'
-    res = database_context.get_db().cur.execute(query)
-    _json = [{row[0]: row[1]} for row in res.fetchall()]
-    return jsonify(_json)

@@ -5,7 +5,8 @@ import pathlib
 from flask import Flask, current_app, g
 from flask.cli import with_appcontext
 from . import database_context
-from . import backend
+from . import traffic_api
+from . import data_api
 from . import secret
 
 
@@ -49,28 +50,30 @@ def create_app():
 
 def init_app(app):
     """Initialize the provided application context."""
-    # Register "backend" Blueprint
-    app.register_blueprint(backend.blueprint)
-    # Register `close_db()` on app teardown
+    # Register blueprints
+    app.register_blueprint(traffic_api.blueprint)
+    app.register_blueprint(data_api.blueprint)
+    # Register `close_db()` on app teardown (end-of-request)
     app.teardown_appcontext(database_context.close_db)
     # Register `Click` commands
-    app.cli.add_command(init_db_command)
+    # app.cli.add_command(init_db_command)
     app.cli.add_command(process_cached_sessions_command)
     app.cli.add_command(cleanup_cached_sessions_command)
 
 
-@click.command('init-db')
-@with_appcontext
-def init_db_command():
-    """Re-initialize the database with the schema."""
-    database_context.init_db()
-    click.echo('Initialized the database.')
+# TODO: THIS NO LONGER WORKS BECAUSE THE SCHEMA HAS BEEN MOVED TO A DIFFERENT FOLDER
+# @click.command('init-db')
+# @with_appcontext
+# def init_db_command():
+#     """Re-initialize the database with the schema."""
+#     database_context.init_db()
+#     click.echo('Initialized the database.')
 
 
 @click.command('process-cached-sessions')
 @with_appcontext
 def process_cached_sessions_command():
-    backend.process_cached_sessions()
+    traffic_api.process_cached_sessions()
 
 
 @click.command('cleanup-cached-sessions')
