@@ -1,11 +1,5 @@
-import typing
 import datetime
-import pathlib
-import json
-from flask import Blueprint, g, current_app, request, Response, jsonify
-from analyticsdb import database
-from analyticsdb import user as us
-from analyticsdb import session as se
+from flask import Blueprint, request, Response, jsonify
 from . import database_context as db_context
 
 
@@ -32,9 +26,9 @@ def parse_args(args, start_date=True, end_date=True):
     return start_date, end_date
 
 
-# TODO: VARIABLE INTERVALS
-@blueprint.route('/unique-users')
-def get_unique_users():
+# TODO: MAKE INTERVALS OPTIONAL AND VARIABLE
+@blueprint.route('/unique-users-per-week')
+def get_unique_users_per_week():
     try:
         start_date, end_date = parse_args(request.args)
         db = db_context.get_db()
@@ -44,12 +38,56 @@ def get_unique_users():
         return Response(str(e), status=400)
 
 
-@blueprint.route('/views')
-def get_views():
+@blueprint.route('/views-per-week')
+def get_views_per_week():
     try:
         start_date, end_date = parse_args(request.args)
         db = db_context.get_db()
         res = db.get_views(start_date, end_date)
+        return jsonify(res)
+    except ValueError as e:
+        return Response(str(e), status=400)
+
+
+@blueprint.route('/countries')
+def get_countries():
+    try:
+        start_date, end_date = parse_args(request.args)
+        db = db_context.get_db()
+        res = db.get_countries(start_date, end_date, 'USER')
+        return jsonify(res)
+    except ValueError as e:
+        return Response(str(e), status=400)
+
+
+@blueprint.route('/cities')
+def get_cities():
+    try:
+        start_date, end_date = parse_args(request.args)
+        db = db_context.get_db()
+        res = db.get_cities(start_date, end_date, 'USER')
+        return jsonify(res)
+    except ValueError as e:
+        return Response(str(e), status=400)
+
+
+@blueprint.route('/urls')
+def get_urls():
+    try:
+        start_date, end_date = parse_args(request.args)
+        db = db_context.get_db()
+        res = db.get_urls(start_date, end_date, 'USER')
+        return jsonify(res)
+    except ValueError as e:
+        return Response(str(e), status=400)
+
+
+@blueprint.route('/hostnames')
+def get_hostnames():
+    try:
+        start_date, end_date = parse_args(request.args)
+        db = db_context.get_db()
+        res = db.get_hostnames(start_date, end_date, 'BOT')
         return jsonify(res)
     except ValueError as e:
         return Response(str(e), status=400)

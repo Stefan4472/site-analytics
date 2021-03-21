@@ -313,10 +313,7 @@ class Database:
             'WHERE s._first_request_time > ? AND s._first_request_time < ? ' \
             'GROUP BY _classification, strftime("%Y%W", s._first_request_time)' \
             'ORDER BY s._first_request_time ASC'
-        values = (
-            start_date,
-            end_date,
-        )
+        values = (start_date, end_date)
         result = self.cur.execute(query, values)
         return dbutil.format_timeboxed_result(result)
 
@@ -333,9 +330,76 @@ class Database:
             'WHERE v._timestamp > ? AND v._timestamp < ? ' \
             'GROUP BY _classification, strftime("%Y%W", v._timestamp) ' \
             'ORDER BY v._timestamp ASC'
-        values = (
-            start_date,
-            end_date,
-        )
+        values = (start_date, end_date)
         result = self.cur.execute(query, values)
         return dbutil.format_timeboxed_result(result)
+
+    def get_countries(
+            self,
+            start_date: datetime.datetime,
+            end_date: datetime.datetime,
+            classification: str,
+    ) -> [dto.CountryResult]:
+        """Get number of views per country."""
+        query = \
+            'SELECT _country, COUNT(*) ' \
+            'FROM _Views AS v ' \
+            'JOIN _Users AS u ON v._user_id = u._user_id ' \
+            'WHERE u._classification = ? AND v._timestamp > ? AND v._timestamp < ? ' \
+            'GROUP BY _country ' \
+            'ORDER BY COUNT(*) DESC'
+        values = (classification, start_date, end_date)
+        res = self.cur.execute(query, values)
+        return [dto.CountryResult(row[0], row[1]) for row in res.fetchall()]
+
+
+    def get_cities(
+            self,
+            start_date: datetime.datetime,
+            end_date: datetime.datetime,
+            classification: str,
+    ) -> [dto.CountryResult]:
+        """Get number of views per country."""
+        query = \
+            'SELECT _city, COUNT(*) ' \
+            'FROM _Views AS v ' \
+            'JOIN _Users AS u ON v._user_id = u._user_id ' \
+            'WHERE u._classification = ? AND v._timestamp > ? AND v._timestamp < ? ' \
+            'GROUP BY _country ' \
+            'ORDER BY COUNT(*) DESC'
+        values = (classification, start_date, end_date)
+        res = self.cur.execute(query, values)
+        return [dto.CityResult(row[0], row[1]) for row in res.fetchall()]
+
+    def get_urls(
+            self,
+            start_date: datetime.datetime,
+            end_date: datetime.datetime,
+            classification: str,
+    ) -> [dto.PostResult]:
+        query = \
+            'SELECT v._url, COUNT(*) ' \
+            'FROM _Views AS v ' \
+            'JOIN _Users as u on v._user_id = u._user_id ' \
+            'WHERE u._classification = ? AND v._timestamp > ? AND v._timestamp < ? ' \
+            'GROUP BY _url ' \
+            'ORDER BY COUNT(*) DESC'
+        values = (classification, start_date, end_date)
+        res = self.cur.execute(query, values)
+        return [dto.PostResult(row[0], row[1]) for row in res.fetchall()]
+
+    def get_hostnames(
+            self,
+            start_date: datetime.datetime,
+            end_date: datetime.datetime,
+            classification: str,
+    ) -> [dto.HostnameResult]:
+        query = 'SELECT _domain, COUNT(*) ' \
+                'FROM _Views AS v ' \
+                'JOIN _Users AS u ON v._user_id = u._user_id ' \
+                'WHERE u._classification = ? AND v._timestamp > ? AND v._timestamp < ? ' \
+                'GROUP BY _country ' \
+                'ORDER BY COUNT(*) DESC'
+        values = (classification, start_date, end_date)
+        res = self.cur.execute(query, values)
+        return [dto.HostnameResult(row[0], row[1]) for row in res.fetchall()]
