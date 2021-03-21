@@ -4,6 +4,7 @@ import typing
 from . import user
 from . import session
 from . import dto
+from . import dbutil
 
 
 class Database:
@@ -304,10 +305,7 @@ class Database:
             start_date: datetime.datetime,
             end_date: datetime.datetime,
     ) -> [dto.UserBotDateResult]:
-        # NOTE: I am assuming that the Python %W is equivalent
-        # to the SQlite %W (i.e., weeks start on Monday). This is
-        # not specified in official SQLite documentation, but is
-        # supported here: https://www.techonthenet.com/sqlite/functions/strftime.php
+        """Get unique users timeboxed by week of year."""
         query = \
             'SELECT strftime("%Y-%W", s._first_request_time) AS Week, _classification, COUNT(*) ' \
             'FROM _Users AS u ' \
@@ -320,23 +318,24 @@ class Database:
             end_date,
         )
         result = self.cur.execute(query, values)
+        return dbutil.format_timeboxed_result(result)
 
-        # Build objects by going in sequence.
-        # They are already sorted by date.
-        res = []
-        prev_date: datetime.datetime = None
-        for row in result.fetchall():
-            # Parse date out of the %Y-%W sqlite format.
-            # This requires setting the weekday to "1" (Monday).
-            # See https://stackoverflow.com/a/17087427
-            curr_date = datetime.datetime.strptime(row[0] + '-1', '%Y-%W-%w')
-            if curr_date != prev_date:
-                res.append(dto.UserBotDateResult(curr_date))
-                prev_date = curr_date
-            if row[1] == 'USER':
-                res[-1].user = row[2]
-            elif row[1] == 'BOT':
-                res[-1].bot = row[2]
-        return res
-
-
+    def get_views(
+            self,
+            start_date: datetime.datetime,
+            end_date: datetime.datetime,
+    ) -> [dto.UserBotDateResult]:
+        """Get site hits timeboxed by week of year."""
+        query = \
+            'SELECT strftime("%Y-%W", v._timestamp) AS Week, _classification, COUNT(*) ' \
+            'FROM _Users AS u ' \
+            'JOIN _Views AS v ON u._user_id = v._user_id ' \
+            'WHERE v._timestamp > ? AND v._timestamp < ? ' \
+            'GROUP BY _classification, strftime("%Y%W", v._timestamp) ' \
+            'ORDER BY v._timestamp ASC'
+        values = (
+            start_date,
+            end_date,
+        )
+        result = self.cur.execute(query, values)
+        return dbutil.format_timeboxed_result(result)
