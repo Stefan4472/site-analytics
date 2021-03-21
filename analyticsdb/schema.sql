@@ -8,11 +8,11 @@ drop table if exists _CachedSessions;
 create table _Users(
     _user_id integer primary key autoincrement,
     _ip_address text not null,
-    _hostname text default "UNKOWN",
-    _domain text default "UNKOWN",
-    _city text default "UNKOWN",
-    _region text default "UNKOWN",
-    _country text default "UNKOWN",
+    _hostname text default "UNKNOWN",
+    _domain text default "UNKNOWN",
+    _city text default "UNKNOWN",
+    _region text default "UNKNOWN",
+    _country text default "UNKNOWN",
     _classification text default "USER",
     _was_processed integer default 0,
     unique(_ip_address)
