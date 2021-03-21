@@ -1,10 +1,16 @@
 import sqlite3
 import datetime
+import enum
 import typing
 from . import user
 from . import session
 from . import dto
 from . import dbutil
+
+
+class Classification(enum.Enum):
+    USER = 'USER'
+    BOT = 'BOT'
 
 
 class Database:
@@ -300,7 +306,7 @@ class Database:
         return rows_deleted
 
     '''Start analytics functions '''
-    def get_unique_users(
+    def get_unique_ips(
             self,
             start_date: datetime.datetime,
             end_date: datetime.datetime,
@@ -338,9 +344,9 @@ class Database:
             self,
             start_date: datetime.datetime,
             end_date: datetime.datetime,
-            classification: str,
+            classification: Classification,
     ) -> [dto.CountryResult]:
-        """Get number of views per country."""
+        """Get number of views per country for the given classification."""
         query = \
             'SELECT _country, COUNT(*) ' \
             'FROM _Views AS v ' \
@@ -348,7 +354,7 @@ class Database:
             'WHERE u._classification = ? AND v._timestamp > ? AND v._timestamp < ? ' \
             'GROUP BY _country ' \
             'ORDER BY COUNT(*) DESC'
-        values = (classification, start_date, end_date)
+        values = (classification.value, start_date, end_date)
         res = self.cur.execute(query, values)
         return [dto.CountryResult(row[0], row[1]) for row in res.fetchall()]
 
@@ -357,9 +363,9 @@ class Database:
             self,
             start_date: datetime.datetime,
             end_date: datetime.datetime,
-            classification: str,
+            classification: Classification,
     ) -> [dto.CountryResult]:
-        """Get number of views per country."""
+        """Get number of views per city for the given classification."""
         query = \
             'SELECT _city, COUNT(*) ' \
             'FROM _Views AS v ' \
@@ -367,7 +373,7 @@ class Database:
             'WHERE u._classification = ? AND v._timestamp > ? AND v._timestamp < ? ' \
             'GROUP BY _country ' \
             'ORDER BY COUNT(*) DESC'
-        values = (classification, start_date, end_date)
+        values = (classification.value, start_date, end_date)
         res = self.cur.execute(query, values)
         return [dto.CityResult(row[0], row[1]) for row in res.fetchall()]
 
@@ -375,8 +381,9 @@ class Database:
             self,
             start_date: datetime.datetime,
             end_date: datetime.datetime,
-            classification: str,
+            classification: Classification,
     ) -> [dto.PostResult]:
+        """Get number of views per url for the given classification."""
         query = \
             'SELECT v._url, COUNT(*) ' \
             'FROM _Views AS v ' \
@@ -384,7 +391,7 @@ class Database:
             'WHERE u._classification = ? AND v._timestamp > ? AND v._timestamp < ? ' \
             'GROUP BY _url ' \
             'ORDER BY COUNT(*) DESC'
-        values = (classification, start_date, end_date)
+        values = (classification.value, start_date, end_date)
         res = self.cur.execute(query, values)
         return [dto.PostResult(row[0], row[1]) for row in res.fetchall()]
 
@@ -392,14 +399,15 @@ class Database:
             self,
             start_date: datetime.datetime,
             end_date: datetime.datetime,
-            classification: str,
+            classification: Classification,
     ) -> [dto.HostnameResult]:
+        """Get number of views by hostname for the given classification."""
         query = 'SELECT _domain, COUNT(*) ' \
                 'FROM _Views AS v ' \
                 'JOIN _Users AS u ON v._user_id = u._user_id ' \
                 'WHERE u._classification = ? AND v._timestamp > ? AND v._timestamp < ? ' \
                 'GROUP BY _country ' \
                 'ORDER BY COUNT(*) DESC'
-        values = (classification, start_date, end_date)
+        values = (classification.value, start_date, end_date)
         res = self.cur.execute(query, values)
         return [dto.HostnameResult(row[0], row[1]) for row in res.fetchall()]

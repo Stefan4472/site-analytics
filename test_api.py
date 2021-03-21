@@ -40,7 +40,7 @@ def make_plot(
 
 
 params = {'start_date': '2020-10-10', 'end_date': '2021-3-15'}
-r = requests.get('http://127.0.0.1:5000/api/v1/data/unique-users', params=params)
+r = requests.get('http://127.0.0.1:5000/api/v1/data/unique-users-per-week', params=params)
 dates, user_data, bot_data = parse_timeboxed_data(r.json())
 
 fig = make_plot(dates, user_data, bot_data, 'Unique IP Addresses per Week', x_label='Week')
