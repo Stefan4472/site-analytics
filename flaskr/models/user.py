@@ -1,25 +1,6 @@
-import uuid
 from flaskr import db
-from flaskr import hostname_lookup
-from flaskr import location_lookup
-
-
-# TODO: NARROW THE LIST? SEE HOW WELL THE "REQUESTS-PER-SECOND" METRIC WORKS
-BOT_KEYWORDS = [
-    'bot',
-    'scan',
-    'surf',
-    'spider',
-    'crawl',
-    'pool',
-    'ip189',
-    'amazonaws',
-    'googleusercontent',
-    'bezeqint',
-    'greenhousedata',
-    'comcastbusiness',
-    'dataprovider',
-]
+from flaskr.hostname import hostname_from_ip, domain_from_hostname, is_bot
+from flaskr.location import location_from_ip
 
 
 class User(db.Model):
@@ -39,11 +20,11 @@ class User(db.Model):
     views = db.relationship('View', back_populates='user')
 
     def process(self):
-        hostname = hostname_lookup.hostname_from_ip(self.ip_address)
+        hostname = hostname_from_ip(self.ip_address)
         self.hostname = hostname
-        self.domain = hostname_lookup.domain_from_hostname(hostname)
+        self.domain = domain_from_hostname(hostname)
 
-        location = location_lookup.location_from_ip(self.ip_address)
+        location = location_from_ip(self.ip_address)
         self.city = location.city
         self.region = location.region_name
         self.country = location.country_name
@@ -51,18 +32,28 @@ class User(db.Model):
         self.is_bot = self._check_is_bot()
         self.was_processed = True
 
-    # TODO: CLASSIFY BASED ON USER_AGENT / Views
     def _check_is_bot(self) -> bool:
         """Decides whether this User is a bot. Call after determining hostname."""
-        # if session.calc_requests_per_second() > 1.5:
-        #     return True
-        if any(keyword in self.hostname.lower() for keyword in BOT_KEYWORDS):
+        if any(v.is_bot() for v in self.views):
+            return True
+        elif is_bot(self.hostname):
+            return True
+        elif self._calc_requests_per_second() >= 1:
             return True
         else:
             return False
 
+    def _calc_requests_per_second(self) -> float:
+        if self.views:
+            time_diff = self.views[-1].timestamp - self.views[0].timestamp
+            return time_diff.total_seconds() / len(self.views)
+        else:
+            return 0
+
     def __repr__(self):
-        return 'User(id="{}", ip_address="{}")'.format(
+        return 'User(id="{}", ip_address="{}", hostname="{}", country="{}")'.format(
             self.id,
             self.ip_address,
+            self.hostname,
+            self.country,
         )

@@ -34,7 +34,6 @@ def location_from_ip(
             return Location()
         else:
             response_json = json.loads(response_str)
-            print(response_json)
             # Build kwargs for `Location` instance
             location_kwargs = {}
             if response_json.get('country_name'):
@@ -45,7 +44,7 @@ def location_from_ip(
                 location_kwargs['region_name'] = response_json['region_name']
             return Location(**location_kwargs)
     except json.decoder.JSONDecodeError as e:
-        return Location
+        return Location()
   
 
 # def country_from_ip(ip_addr: str):

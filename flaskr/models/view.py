@@ -1,4 +1,5 @@
 from flaskr import db
+from flaskr import user_agent
 
 
 class View(db.Model):
@@ -14,9 +15,17 @@ class View(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     user = db.relationship('User', back_populates='views')
 
+    def process(self):
+        self.operating_system = user_agent.determine_os(self.user_agent)
+        self.browser = user_agent.determine_browser(self.user_agent)
+
+    def is_bot(self) -> bool:
+        return user_agent.is_bot(self.user_agent)
+
     def __repr__(self):
-        return 'View(user_id="{}", url="{}, timestamp={}")'.format(
+        return 'View(user_id="{}", url="{}", timestamp={}, agent="{}")'.format(
             self.user_id,
             self.url,
             self.timestamp,
+            self.user_agent,
         )

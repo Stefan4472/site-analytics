@@ -36,7 +36,6 @@ def report_traffic():
     if 'user_agent' not in request.json:
         return Response('Missing "user_agent" arg', status=400)
 
-    # TODO: THESE STRINGS NEED TO BE ESCAPED
     url = request.json['url']
     user_ip = request.json['ip_addr']
     user_agent = request.json['user_agent']
@@ -51,9 +50,10 @@ def report_traffic():
             user_agent,
         ))
 
-    # Add to database
+    # Add to database. SQL-Alchemy will escape strings before processing them.
     user = get_or_create_user(user_ip)
     view = View(url=url, user_agent=user_agent, timestamp=request_time)
+    view.process()
     db.session.add(user)
     db.session.add(view)
     user.views.append(view)
@@ -69,7 +69,6 @@ def get_or_create_user(ip_address: str) -> User:
 
 def process_users():
     for user in User.query.filter_by(was_processed=False):
-        print(user)
         user.process()
     db.session.commit()
 
@@ -90,7 +89,8 @@ def run_import():
             print(timestamp)
             user = get_or_create_user(ip)
             view = View(url=url, user_agent=user_agent, timestamp=request_time)
+            view.process()
             db.session.add(user)
-            db.session.add(view)
+            db.session.add(view)  # TODO: might be unnecessary
             user.views.append(view)
     db.session.commit()
