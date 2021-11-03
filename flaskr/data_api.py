@@ -1,6 +1,5 @@
 from flask import Blueprint, request, Response, jsonify
 from flask_login import login_required
-from . import database_context as db_context
 from . import argparser
 
 

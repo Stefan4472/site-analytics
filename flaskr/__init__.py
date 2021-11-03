@@ -4,7 +4,7 @@ import pathlib
 from flask import Flask
 from flask.cli import with_appcontext
 from . import auth
-from . import database_context
+from .database import db
 from . import traffic_api
 from . import data_api
 from . import secret
@@ -13,8 +13,11 @@ from . import secret
 def create_app():
     """Create and configure the Flask app."""
     app = Flask(__name__, instance_relative_config=True)
-    auth.login_manager.init_app(app)
 
+    instance_path = pathlib.Path(app.instance_path)
+    instance_path.mkdir(exist_ok=True)
+
+    # TODO: REPLACE WITH .ENV
     secret_path = os.path.join(app.instance_path, 'secret.txt')
     try:
         secret_key = secret.load_secret_key(pathlib.Path(secret_path))
@@ -25,65 +28,47 @@ def create_app():
         raise ValueError(err)
 
     # Setup `current_app` config
-    # TODO: BETTER WAY TO CACHE `ACTIVE_SESSIONS`?
     app.config.from_mapping(
         SECRET_KEY=secret_key,
-        DATABASE_PATH=os.path.join(app.instance_path, 'site-traffic.sqlite'),
-        LOG_PATH=os.path.join(app.instance_path, 'traffic-log.csv'),
+        DATABASE_PATH=str((instance_path / 'site-traffic.sqlite').absolute()),
+        LOG_PATH=str((instance_path / 'traffic-log.csv').absolute()),
+        SQLALCHEMY_DATABASE_URI='sqlite:///' + str((instance_path / 'site-traffic.db').absolute()),
+        SQLALCHEMY_TRACK_MODIFICATIONS=False,
     )
 
-    # Load the instance config, if it exists, when not testing
-    app.config.from_pyfile('config.py', silent=True)
+    # Init flask addons
+    auth.login_manager.init_app(app)
+    db.init_app(app)
 
-    # Ensure that the instance folder exists
-    try:
-        os.makedirs(app.instance_path)
-    except OSError:
-        pass
-
-    init_app(app)
-    return app
-
-
-def init_app(app):
-    """Initialize the provided application context."""
     # Register blueprints
     app.register_blueprint(traffic_api.blueprint)
     app.register_blueprint(data_api.blueprint)
-    # Register `close_db()` on app teardown (end-of-request)
-    app.teardown_appcontext(database_context.close_db)
     # Register `Click` commands
     app.cli.add_command(init_db_command)
-    app.cli.add_command(process_cached_sessions_command)
-    app.cli.add_command(cleanup_cached_sessions_command)
     app.cli.add_command(run_import_command)
+    app.cli.add_command(process_users_command)
+
+    return app
 
 
+# TODO: MOVE TO `CLI.PY`
 @click.command('init-db')
-@click.argument('schemapath', type=click.Path(exists=True, readable=True))
 @with_appcontext
-def init_db_command(schemapath: str):
-    """Create the database, using the schema at the path provided."""
-    database_context.init_db(schemapath)
+def init_db_command():
+    """Drop existing database and create new one via SQL-Alchemy."""
+    db.drop_all()
+    db.create_all()
     click.echo('Initialized the database.')
 
 
 @click.command('run-import')
 @with_appcontext
 def run_import_command():
+    """For temporary development usage only!"""
     traffic_api.run_import()
 
 
-@click.command('process-cached-sessions')
+@click.command('process-users')
 @with_appcontext
-def process_cached_sessions_command():
-    traffic_api.process_cached_sessions()
-
-
-@click.command('cleanup-cached-sessions')
-@with_appcontext
-def cleanup_cached_sessions_command():
-    rows_deleted = \
-        database_context.get_db().cleanup_cached_sessions(commit=True)
-    click.echo('Deleted {} stale records'.format(rows_deleted))
-
+def process_users_command():
+    traffic_api.process_users()

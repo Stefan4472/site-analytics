@@ -2,7 +2,6 @@ import dataclasses as dc
 from . import session
 
 
-# TODO: MAKE INTO NAMEDTUPLE
 @dc.dataclass
 class User:
     user_id: int
@@ -12,7 +11,7 @@ class User:
     city: str
     region: str
     country: str
-    classification: str
+    is_bot: bool
     was_processed: bool
 
 
@@ -35,13 +34,12 @@ BOT_KEYWORDS = [
 
 
 # TODO: CLASSIFY BASED ON USER_AGENT
-def classify_user(
+def is_bot(
         user: User,
-        session: session.Session,
-) -> str:
+) -> bool:
     if session.calc_requests_per_second() > 1.5:
-        return 'BOT'
+        return True
     elif any(keyword in user.hostname.lower() for keyword in BOT_KEYWORDS):
-        return 'BOT'
+        return True
     else:
-        return 'USER'
+        return False

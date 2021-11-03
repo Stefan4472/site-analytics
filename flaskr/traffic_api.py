@@ -1,11 +1,9 @@
 import datetime
 from flask import Blueprint, current_app, request, Response
 from flask_login import login_required
-from analyticsdb import user as us
-from analyticsdb import session as se
-from . import database_context
-from . import hostname_lookup
-from . import location_lookup
+from flaskr import db
+from models.user import User
+from models.view import View
 '''
 TODO: SEND A 'WEEKLY REPORT' EMAIL? (Or move that to a different service?)
 
@@ -27,72 +25,57 @@ corresponding users
 blueprint = Blueprint('traffic', __name__, url_prefix='/api/v1/traffic')
 
 
-def get_or_create_user(
-        ip_address: str,
-) -> us.User:
-    db = database_context.get_db()
-    user = db.get_user(ip_address)
-    return user if user else db.create_user(ip_address, commit=True)
+@blueprint.route('', methods=['POST'])
+@login_required
+def report_traffic():
+    # Ensure all other args are present
+    if 'url' not in request.json:
+        return Response('Missing "url" arg', status=400)
+    if 'ip_addr' not in request.json:
+        return Response('Missing "ip_addr" arg', status=400)
+    if 'user_agent' not in request.json:
+        return Response('Missing "user_agent" arg', status=400)
+
+    # TODO: THESE STRINGS NEED TO BE ESCAPED
+    url = request.json['url']
+    user_ip = request.json['ip_addr']
+    user_agent = request.json['user_agent']
+    request_time = datetime.datetime.now()
+
+    # Write to log file
+    with open(current_app.config['LOG_PATH'], 'a') as log_file:
+        log_file.write('{},{},{},{}\n'.format(
+            request_time,
+            url,
+            user_ip,
+            user_agent,
+        ))
+
+    # Add to database
+    user = get_or_create_user(user_ip)
+    view = View(url=url, user_agent=user_agent, timestamp=request_time)
+    db.session.add(user)
+    db.session.add(view)
+    user.views.append(view)
+    db.session.commit()
+
+    return Response(status=200)
 
 
-def get_or_create_session(
-        user: us.User,
-        request_time: datetime.datetime,
-) -> se.Session:
-    # Check if user has a cached session
-    db = database_context.get_db()
-    cached_session = db.lookup_cached_session(user.user_id)
-    # Session is active: use it
-    if cached_session and cached_session.is_active():
-        return cached_session
-    # Session is now inactive: mark it as stale and create new session
-    elif cached_session:
-        db.update_cached_session(cached_session, is_stale=True)
-        session = db.create_session(user, request_time)
-        db.add_session_to_cache(session)
-        db.commit()
-        return session
-    else:
-        session = db.create_session(user, request_time)
-        db.add_session_to_cache(session)
-        db.commit()
-        return session
+def get_or_create_user(ip_address: str) -> User:
+    existing_user = User.query.filter_by(ip_address=ip_address).first()
+    return existing_user if existing_user else User(ip_address=ip_address)
 
 
-def process_user(
-        user: us.User,
-        session: se.Session,
-) -> us.User:
-    hostname = hostname_lookup.hostname_from_ip(user.ip_address)
-    location = location_lookup.location_from_ip(user.ip_address)
-
-    user.hostname = hostname
-    user.domain = hostname_lookup.domain_from_hostname(hostname)
-    user.city = location.city
-    user.region = location.region_name
-    user.country = location.country_name
-    user.classification = us.classify_user(user, session)
-    user.was_processed = True
-    return user  # TODO: DO WE NEED TO RETURN IT?
-
-
-def process_cached_sessions():
-    db = database_context.get_db()
-    i = 0
-    for session in db.gen_all_cached_sessions():
-        i += 1
-        if i >= 10000:
-            print(i)
-            # Get associated user
-            user = db.get_user_by_id(session.user_id)
-            if not user.was_processed:
-                user = process_user(user, session)
-                db.update_user(user)
-    db.commit()
+def process_users():
+    for user in User.query.filter_by(was_processed=False):
+        print(user)
+        user.process()
+    db.session.commit()
 
 
 def run_import():
-    with open('../log.txt') as f:
+    with open('../log-test.txt') as f:
         for line in f:
             first_comma = line.index(',')
             second_comma = line.index(',', first_comma + 1)
@@ -106,50 +89,8 @@ def run_import():
 
             print(timestamp)
             user = get_or_create_user(ip)
-            session = get_or_create_session(user, request_time)
-            session.record_request(request_time)
-            # Record the view and update the session
-            db = database_context.get_db()
-            db.record_view(session, request_time, url, user_agent)
-            db.update_session(session)
-    db.commit()
-
-
-@blueprint.route('', methods=['POST'])
-@login_required
-def report_traffic():
-    # Ensure all other args are present
-    if 'url' not in request.json:
-        return Response('Missing "url" arg', status=400)
-    if 'ip_addr' not in request.json:
-        return Response('Missing "ip_addr" arg', status=400)
-    if 'user_agent' not in request.json:
-        return Response('Missing "user_agent" arg', status=400)
-
-    url = request.json['url']
-    user_ip = request.json['ip_addr']
-    user_agent = request.json['user_agent']
-    request_time = datetime.datetime.strptime(request.json['timestamp'], '%m-%d-%Y-%H:%M:%S:%f')
-    # request_time = datetime.datetime.now()
-
-    # TODO: THESE STRINGS NEED TO BE ESCAPED BEFORE WRITING TO DATABASE
-    # Write to log file
-    # with open(current_app.config['LOG_PATH'], 'a') as log_file:
-    #     log_file.write('{},{},{},{}\n'.format(
-    #         request_time,
-    #         url,
-    #         user_ip,
-    #         user_agent,
-    #     ))
-
-    user = get_or_create_user(user_ip)
-    session = get_or_create_session(user, request_time)
-    session.record_request(request_time)
-
-    # Record the view and update the session
-    db = database_context.get_db()
-    db.record_view(session, request_time, url, user_agent)
-    db.update_session(session)
-    db.commit()
-
-    return Response(status=200)
+            view = View(url=url, user_agent=user_agent, timestamp=request_time)
+            db.session.add(user)
+            db.session.add(view)
+            user.views.append(view)
+    db.session.commit()
