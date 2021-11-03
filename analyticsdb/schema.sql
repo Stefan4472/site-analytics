@@ -24,9 +24,9 @@ create table _Sessions(
     _user_id integer not null,
     _first_request_time datetime not null,
     _last_request_time datetime,
-    _num_requests integer default 0,
+    _num_requests integer default 0
     -- _is_finished integer default 0,
-    unique(_user_id, _first_request_time)
+--     unique(_user_id, _first_request_time)
 );
 
 -- TODO: MOVE 'USER_AGENT' INTO THE SESSIONS TABLE? / MAKE IT PART OF WHAT DEFINES A NEW SESSION?
@@ -37,7 +37,9 @@ create table _Views(
     _user_id integer not null,
     _timestamp datetime not null,
     _url text not null,
-    _user_agent text not null
+    _user_agent text not null,
+    _operating_system text,
+    _browser text
 );
 
 create table _CachedSessions(

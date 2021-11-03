@@ -56,6 +56,7 @@ def init_app(app):
     app.cli.add_command(init_db_command)
     app.cli.add_command(process_cached_sessions_command)
     app.cli.add_command(cleanup_cached_sessions_command)
+    app.cli.add_command(run_import_command)
 
 
 @click.command('init-db')
@@ -65,6 +66,12 @@ def init_db_command(schemapath: str):
     """Create the database, using the schema at the path provided."""
     database_context.init_db(schemapath)
     click.echo('Initialized the database.')
+
+
+@click.command('run-import')
+@with_appcontext
+def run_import_command():
+    traffic_api.run_import()
 
 
 @click.command('process-cached-sessions')

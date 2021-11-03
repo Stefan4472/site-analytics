@@ -34,15 +34,14 @@ BOT_KEYWORDS = [
 ]
 
 
+# TODO: CLASSIFY BASED ON USER_AGENT
 def classify_user(
         user: User,
         session: session.Session,
 ) -> str:
-    if user.ip_address == '24.63.226.42' or user.city == 'Concord':
-        return 'ME'
-    elif session.calc_requests_per_second() > 1.5:
+    if session.calc_requests_per_second() > 1.5:
         return 'BOT'
-    elif any(keyword in user.hostname for keyword in BOT_KEYWORDS):
+    elif any(keyword in user.hostname.lower() for keyword in BOT_KEYWORDS):
         return 'BOT'
     else:
         return 'USER'

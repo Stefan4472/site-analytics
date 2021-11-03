@@ -109,7 +109,7 @@ class Database:
                 '_region = ?, ' \
                 '_country = ?, ' \
                 '_classification = ?, ' \
-                '_was_processed = ?, ' \
+                '_was_processed = ? ' \
                 'where _user_id = ?'
         values = (
             user.hostname,
@@ -160,8 +160,8 @@ class Database:
         return session.Session(
             session_data['_session_id'],
             session_data['_user_id'],
-            datetime.datetime.strptime(session_data['_first_request_time'], '%Y-%m-%d %H:%M:%S.%f'),
-            datetime.datetime.strptime(session_data['_last_request_time'], '%Y-%m-%d %H:%M:%S.%f'),
+            self._parse_datetime(session_data['_first_request_time']),
+            self._parse_datetime(session_data['_last_request_time']),
             session_data['_num_requests'],
         )
 
@@ -176,8 +176,8 @@ class Database:
             return session.Session(
                 session_data['_session_id'],
                 session_data['_user_id'],
-                datetime.datetime.strptime(session_data['_first_request_time'], '%Y-%m-%d %H:%M:%S.%f'),
-                datetime.datetime.strptime(session_data['_last_request_time'], '%Y-%m-%d %H:%M:%S.%f'),
+                self._parse_datetime(session_data['_first_request_time']),
+                self._parse_datetime(session_data['_last_request_time']),
                 session_data['_num_requests'],
             )
         else:
@@ -411,3 +411,11 @@ class Database:
         values = (classification.value, start_date, end_date)
         res = self.cur.execute(query, values)
         return [dto.HostnameResult(row[0], row[1]) for row in res.fetchall()]
+
+    def _parse_datetime(self, date_str: str) -> datetime.datetime:
+        try:
+            # Sometimes this doesn't work. Some kind of SQL oddity
+            return datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S.%f')
+        except ValueError as e:
+            pass
+        return datetime.datetime.strptime(date_str, '%Y-%m-%d %H:%M:%S')

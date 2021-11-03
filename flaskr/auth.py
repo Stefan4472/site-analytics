@@ -19,7 +19,4 @@ def load_user(request):
     Example: http://gouthamanbalaraman.com/blog/minimal-flask-login-example.html
     """
     token = request.headers.get('Authorization')
-    if token == current_app.config['SECRET_KEY']:
-        return UserMixin()
-    else:
-        return None
+    return UserMixin() if token == current_app.config['SECRET_KEY'] else None
