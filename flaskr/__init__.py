@@ -56,10 +56,11 @@ def init_db_command():
 
 
 @click.command('run-import')
+@click.argument('logfile', type=click.Path(exists=True, dir_okay=False, file_okay=True, path_type=pathlib.Path))
 @with_appcontext
-def run_import_command():
+def run_import_command(logfile: str):
     """For temporary development usage only!"""
-    traffic_api.run_import()
+    traffic_api.run_import(logfile)
 
 
 @click.command('process-users')

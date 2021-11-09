@@ -24,26 +24,24 @@ def hostname_from_ip(ip_address: str) -> str:
     try:
         hostname = socket.gethostbyaddr(ip_address)[0]
     except (socket.herror, socket.gaierror):
-        return 'UNKNOWN'
+        raise ValueError('Socket error')
 
     # For the rare case that 'hostname' = Nan
     if isinstance(hostname, float):
-        return 'UNKNOWN'
+        raise ValueError('hostname = Nan')
 
     return hostname
 
 
 def domain_from_hostname(hostname) -> typing.Optional[str]:
-    if not hostname or hostname == 'UNKNOWN':
-        return 'UNKNOWN'
-    if '.' not in hostname:
+    if not hostname or '.' not in hostname:
         return hostname
     segments = hostname.split('.')
     return segments[-2] + '.' + segments[-1]
 
 
 def is_bot(hostname: str) -> bool:
-    # TODO: NOT SURE ABOUT THIS CASE
-    # if not hostname:
-    #     return True
+    # If the hostname couldn't be resolved, we can't assume it's a bot
+    if not hostname:
+        return False
     return any(k in hostname.lower() for k in BOT_KEYWORDS)

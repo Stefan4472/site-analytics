@@ -16,6 +16,7 @@ class View(db.Model):
     user = db.relationship('User', back_populates='views')
 
     def process(self):
+        # TODO: ADD `WAS_PROCESSED` FLAG
         self.operating_system = user_agent.determine_os(self.user_agent)
         self.browser = user_agent.determine_browser(self.user_agent)
 

@@ -1,4 +1,6 @@
 import datetime
+import pathlib
+import time
 from flask import Blueprint, current_app, request, Response
 from flask_login import login_required
 from flaskr import db
@@ -68,18 +70,27 @@ def get_or_create_user(ip_address: str) -> User:
 
 
 def process_users():
+    i = 0
     for user in User.query.filter_by(was_processed=False):
+        time.sleep(0.5)
         try:
             user.process()
         except ValueError as e:
             # TODO: USE LOGGING
             print('Failure processing user {}: {}'.format(user.id, e.args))
+        i += 1
+        if i % 20 == 0:
+            db.session.commit()
     db.session.commit()
 
 
-def run_import():
-    with open('../../log-test.txt') as f:
+def run_import(logfile: pathlib.Path):
+    with open(logfile) as f:
+        i = 0
         for line in f:
+            i += 1
+            if i > 1000:
+                break
             first_comma = line.index(',')
             second_comma = line.index(',', first_comma + 1)
             third_comma = line.index(',', second_comma + 1)
