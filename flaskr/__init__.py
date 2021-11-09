@@ -8,8 +8,9 @@ from .api import traffic_api, data_api
 from . import cli
 
 
-def create_app():
+def create_app(test_config: dict = None):
     """Create and configure the Flask app."""
+    print(test_config)
     # Load environment variables
     load_dotenv('.flaskenv')
 
@@ -24,12 +25,20 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + str(app.config['DATABASE_PATH'].absolute())
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+    if test_config:
+        app.config.update(test_config)
+        print(app.config)
+
+    if app.config['SECRET_KEY'] is None:
+        raise ValueError('SECRET_KEY was not set. Please see the README for instructions on how to setup a .flaskenv file.')
+
     app.logger.info('DATABASE_PATH: {}'.format(app.config['DATABASE_PATH']))
     app.logger.info('LOG_PATH: {}'.format(app.config['LOG_PATH']))
     app.logger.info('SECRET_KEY: {}'.format(app.config['SECRET_KEY']))
 
     if not app.config['DATABASE_PATH'].exists():
         app.logger.warning('WARNING: No database found. Make sure to run `flask init-db`!')
+
 
     # Init flask addons
     auth.login_manager.init_app(app)

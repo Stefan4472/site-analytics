@@ -42,37 +42,38 @@ def make_plot(
     return fig
 
 
-# Make request, providing auth key
-params = {'start_date': '2020-4-1', 'end_date': '2020-5-1', 'classification': 'BOT'}
-r = requests.get(
-    'http://127.0.0.1:5000/api/v1/data/users',
-    headers={'Authorization': 'dev'},
-    params=params,
-)
-if r.status_code == 401:
-    raise ValueError('Authentication failed')
-print(r.json())
+if __name__ == '__main__':
+    # Make request, providing auth key
+    params = {'start_date': '2020-4-1', 'end_date': '2020-5-1', 'classification': 'BOT'}
+    r = requests.get(
+        'http://127.0.0.1:5000/api/v1/data/users',
+        headers={'Authorization': 'dev'},
+        params=params,
+    )
+    if r.status_code == 401:
+        raise ValueError('Authentication failed')
+    print(r.json())
 
-params = {'start_date': '2020-4-1', 'end_date': '2020-5-1', 'classification': 'BOT'}
-r = requests.get(
-    'http://127.0.0.1:5000/api/v1/data/views',
-    headers={'Authorization': 'dev'},
-    params=params,
-)
-if r.status_code == 401:
-    raise ValueError('Authentication failed')
-print(r.json())
+    params = {'start_date': '2020-4-1', 'end_date': '2020-5-1', 'classification': 'BOT'}
+    r = requests.get(
+        'http://127.0.0.1:5000/api/v1/data/views',
+        headers={'Authorization': 'dev'},
+        params=params,
+    )
+    if r.status_code == 401:
+        raise ValueError('Authentication failed')
+    print(r.json())
 
-res = requests.post('http://127.0.0.1:5000/api/v1/traffic', json={
-    'url': '/',
-    'ip_address': '1234',
-    'user_agent': 'TEST',
-}, headers={'Authorization': 'dev'})
-print(res.text)
+    res = requests.post('http://127.0.0.1:5000/api/v1/traffic', json={
+        'url': '/',
+        'ip_address': '1234',
+        'user_agent': 'TEST',
+    }, headers={'Authorization': 'dev'})
+    print(res.text)
 
 
-# dates, user_data, bot_data = parse_timeboxed_data(r.json())
-# fig = make_plot(dates, user_data, bot_data, 'Unique IP Addresses per Week', x_label='Week')
-# fig.show()
+    # dates, user_data, bot_data = parse_timeboxed_data(r.json())
+    # fig = make_plot(dates, user_data, bot_data, 'Unique IP Addresses per Week', x_label='Week')
+    # fig.show()
 
 
