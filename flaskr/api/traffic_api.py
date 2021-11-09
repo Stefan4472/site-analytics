@@ -2,8 +2,8 @@ import datetime
 from flask import Blueprint, current_app, request, Response
 from flask_login import login_required
 from flaskr import db
-from models.user import User
-from models.view import View
+from flaskr.models.user import User
+from flaskr.models.view import View
 '''
 TODO: SEND A 'WEEKLY REPORT' EMAIL? (Or move that to a different service?)
 
@@ -69,12 +69,16 @@ def get_or_create_user(ip_address: str) -> User:
 
 def process_users():
     for user in User.query.filter_by(was_processed=False):
-        user.process()
+        try:
+            user.process()
+        except ValueError as e:
+            # TODO: USE LOGGING
+            print('Failure processing user {}: {}'.format(user.id, e.args))
     db.session.commit()
 
 
 def run_import():
-    with open('../log-test.txt') as f:
+    with open('../../log-test.txt') as f:
         for line in f:
             first_comma = line.index(',')
             second_comma = line.index(',', first_comma + 1)

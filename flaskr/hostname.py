@@ -1,4 +1,5 @@
 import socket
+import typing
 
 
 # TODO: NARROW THE LIST? SEE HOW WELL THE "REQUESTS-PER-SECOND" METRIC WORKS
@@ -19,9 +20,7 @@ BOT_KEYWORDS = [
 ]
 
 
-def hostname_from_ip(
-        ip_address: str,
-) -> str:
+def hostname_from_ip(ip_address: str) -> str:
     try:
         hostname = socket.gethostbyaddr(ip_address)[0]
     except (socket.herror, socket.gaierror):
@@ -34,10 +33,10 @@ def hostname_from_ip(
     return hostname
 
 
-def domain_from_hostname(hostname):
+def domain_from_hostname(hostname) -> typing.Optional[str]:
     if not hostname or hostname == 'UNKNOWN':
         return 'UNKNOWN'
-    if not '.' in hostname:
+    if '.' not in hostname:
         return hostname
     segments = hostname.split('.')
     return segments[-2] + '.' + segments[-1]
@@ -45,6 +44,6 @@ def domain_from_hostname(hostname):
 
 def is_bot(hostname: str) -> bool:
     # TODO: NOT SURE ABOUT THIS CASE
-    if not hostname:
-        return True
+    # if not hostname:
+    #     return True
     return any(k in hostname.lower() for k in BOT_KEYWORDS)

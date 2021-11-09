@@ -14,7 +14,7 @@ This API is functional, but waiting for some cleanup and improved functionality.
 
 # Setup
 
-Install the "analyticsdb" package:
+Install the "analyticsdb" package:  # TODO: THIS IS ABOUT TO BECOME OBSOLETE
 ```
 # in the `analyticsdb` folder
 pip install -e .
@@ -22,33 +22,32 @@ pip install -e .
 
 Install the required packages for the Flask instance:
 ```
+#### TODO: SET UP REQUIREMENTS.TXT
 # in the `flaskr` folder
 pip install flask
 pip install flask-login
 pip install dataclasses
 ```
 
-Setup Flask:
+Setup a `.flaskenv` configuration file. In the `flaskr` folder, create a simple file called `.flaskenv` and enter the following:
 ```
-# in the `flaskr` folder
-set FLASK_APP=.
-set FLASK_ENV=development
+FLASK_APP=.
+FLASK_ENV=development
+SECRET_KEY=<YOUR SECRET KEY HERE>
 ```
 
-Add your secret key. This will be used to authenticate API calls:
-- Go to the `flaskr` folder
-- Create a new directory called `instance`
-- Create a new file in `instance` called `secret.txt`
-- Write your secret key into the file. No whitespace or linebreaks.
+Make sure to set your secret key to something... secret. It will be used to authenticate API calls.
 
-Create the database instance using the schema defined in `analyticsdb`:
+The `FLASK_APP` and `FLASK_ENV` parameters are used to automatically configure your `flask` command. Now, to run the server, you can just call `flask run` from the `flaskr` directory.
+
+Now create the database instance:
 ```
-# in the `flaskr` folder
-flask init-db ../analyticsdb/schema.sql
+flask init-db
 ```
 
 Run the server:
 ```
+# From `flaskr/`:
 flask run
 ```
 
