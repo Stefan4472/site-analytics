@@ -14,12 +14,6 @@ This API is functional, but waiting for some cleanup and improved functionality.
 
 # Setup
 
-Install the "analyticsdb" package:  # TODO: THIS IS ABOUT TO BECOME OBSOLETE
-```
-# in the `analyticsdb` folder
-pip install -e .
-```
-
 Install the required packages for the Flask instance:
 ```
 #### TODO: SET UP REQUIREMENTS.TXT
