@@ -1,7 +1,6 @@
 import datetime
 import pathlib
 import time
-import enum
 from flask import Blueprint, current_app, request, Response
 from flask_login import login_required
 from flaskr import db
@@ -70,15 +69,15 @@ def get_or_create_user(ip_address: str) -> User:
     return existing_user if existing_user else User(ip_address=ip_address)
 
 
-def process_users():
+def process_data():
+    current_app.logger.info('Running data processing')
     i = 0
     for user in User.query.filter_by(was_processed=False):
         time.sleep(0.5)
         try:
             user.process()
         except ValueError as e:
-            # TODO: USE LOGGING
-            print('Failure processing user {}: {}'.format(user.id, e.args))
+            current_app.logger.warning('Failure processing user {}: {}'.format(user.id, e.args))
         i += 1
         if i % 20 == 0:
             db.session.commit()
@@ -86,6 +85,7 @@ def process_users():
 
 
 def run_import(logfile: pathlib.Path):
+    current_app.logger.info('Running import on logfile {}'.format(logfile.absolute()))
     with open(logfile) as f:
         i = 0
         for line in f:
@@ -102,7 +102,7 @@ def run_import(logfile: pathlib.Path):
             ip = line[second_comma + 1:third_comma]
             user_agent = line[third_comma + 1:]
 
-            print(timestamp)
+            current_app.logger.info('Processed request with time {}'.format(timestamp))
             user = get_or_create_user(ip)
             view = View(url=url, user_agent=user_agent, timestamp=request_time)
             view.process()

@@ -1,13 +1,11 @@
-import os
-import click
 import pathlib
 from flask import Flask
-from flask.cli import with_appcontext
 from dotenv import load_dotenv
 from . import settings
 from . import auth
 from .database import db
 from .api import traffic_api, data_api
+from . import cli
 
 
 def create_app():
@@ -26,8 +24,12 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + str(app.config['DATABASE_PATH'].absolute())
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+    app.logger.info('DATABASE_PATH: {}'.format(app.config['DATABASE_PATH']))
+    app.logger.info('LOG_PATH: {}'.format(app.config['LOG_PATH']))
+    app.logger.info('SECRET_KEY: {}'.format(app.config['SECRET_KEY']))
+
     if not app.config['DATABASE_PATH'].exists():
-        print('WARNING: No database found. Make sure to run `flask init-db`!')
+        app.logger.warning('WARNING: No database found. Make sure to run `flask init-db`!')
 
     # Init flask addons
     auth.login_manager.init_app(app)
@@ -38,40 +40,9 @@ def create_app():
     app.register_blueprint(data_api.blueprint)
 
     # Register click commands
-    app.cli.add_command(init_db_command)
-    app.cli.add_command(run_import_command)
-    app.cli.add_command(process_users_command)
-    app.cli.add_command(process_data)
+    app.cli.add_command(cli.init_db_command)
+    app.cli.add_command(cli.run_import_command)
+    app.cli.add_command(cli.process_data)
+    app.cli.add_command(cli.debug_noodling)
 
     return app
-
-
-# TODO: MOVE TO `CLI.PY`
-@click.command('init-db')
-@with_appcontext
-def init_db_command():
-    """Drop existing database and create new one via SQL-Alchemy."""
-    db.drop_all()
-    db.create_all()
-    click.echo('Initialized the database.')
-
-
-@click.command('run-import')
-@click.argument('logfile', type=click.Path(exists=True, dir_okay=False, file_okay=True, path_type=pathlib.Path))
-@with_appcontext
-def run_import_command(logfile: str):
-    """For temporary development usage only!"""
-    traffic_api.run_import(logfile)
-
-
-@click.command('process-users')
-@with_appcontext
-def process_users_command():
-    traffic_api.process_users()
-
-
-@click.command('process-data')
-@with_appcontext
-def process_data():
-    import flaskr.datatest
-    datatest.run()

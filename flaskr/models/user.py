@@ -1,3 +1,4 @@
+from flask import current_app
 from flaskr import db
 from flaskr.processing.hostname import hostname_from_ip, domain_from_hostname, is_bot
 from flaskr.processing.location import request_location_info
@@ -25,19 +26,19 @@ class User(db.Model):
 
         Can throw ValueError. Does NOT process the User's Views.
         """
-        print('Processing User {} (numViews = {})'.format(self.id, len(self.views)))
+        current_app.logger.info('Processing User {} (numViews = {})'.format(self.id, len(self.views)))
         try:
             hostname = hostname_from_ip(self.ip_address)
-            print('Got hostname {}'.format(hostname))
+            current_app.logger.info('Got hostname {}'.format(hostname))
             self.hostname = hostname
             self.domain = domain_from_hostname(hostname)
         except ValueError as e:
             # Hostname exceptions aren't critical.
             # Some IP addresses don't have a valid DNS record.
-            print('Error getting hostname: {}'.format(e))
+            current_app.logger.info('Error getting hostname: {}'.format(e))
 
         location = request_location_info(self.ip_address)
-        print('Got location {}'.format(location))
+        current_app.logger.info('Got location {}'.format(location))
         self.city = location.city
         self.region = location.region_name
         self.country = location.country_name
@@ -46,7 +47,7 @@ class User(db.Model):
             view.process()
 
         self.is_bot = self._check_is_bot()
-        print('is_bot = {}'.format(self.is_bot))
+        current_app.logger.info('is_bot = {}'.format(self.is_bot))
         self.was_processed = True
 
     def _check_is_bot(self) -> bool:
