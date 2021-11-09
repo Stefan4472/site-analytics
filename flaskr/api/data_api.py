@@ -1,8 +1,9 @@
+import marshmallow
 from flask import Blueprint, request, Response, jsonify
 from flask_login import login_required
-from flaskr.api import argparser
 import flaskr.processing.queries as queries
-# TODO: USE MARSHMALLOW TO PARSE CONTRACTS AND SETUP AUTO-SWAGGER DOCUMENTATION
+from flaskr.contracts.data_request import DataRequestContract
+# TODO: SETUP AUTO-SWAGGER DOCUMENTATION USING MARSHMALLOW DEFINITIONS
 
 
 # Create blueprint, which will be used to register URL routes
@@ -14,15 +15,11 @@ blueprint = Blueprint('data', __name__, url_prefix='/api/v1/data')
 def get_users():
     """Query on number of unique users."""
     try:
-        args = argparser.parse_args(
-            request.args,
-            req_start_date=True,
-            req_end_date=True,
-        )
-        res = queries.get_users(args.start_date, args.end_date, args.classification.is_bot())
+        contract: DataRequestContract = DataRequestContract.get_schema().load(request.args)
+        res = queries.get_users(contract.start_date, contract.end_date, contract.classification)
         return jsonify(res)
-    except argparser.ParseException as e:
-        return Response(str(e), status=400)
+    except marshmallow.exceptions.ValidationError as e:
+        return Response(status=400, response='Invalid parameters: {}'.format(e))
 
 
 @blueprint.route('/views')
@@ -30,15 +27,11 @@ def get_users():
 def get_views():
     """Query on number of views."""
     try:
-        args = argparser.parse_args(
-            request.args,
-            req_start_date=True,
-            req_end_date=True,
-        )
-        res = queries.get_views(args.start_date, args.end_date, args.classification.is_bot())
+        contract: DataRequestContract = DataRequestContract.get_schema().load(request.args)
+        res = queries.get_views(contract.start_date, contract.end_date, contract.classification)
         return jsonify(res)
-    except ValueError as e:
-        return Response(str(e), status=400)
+    except marshmallow.exceptions.ValidationError as e:
+        return Response(status=400, response='Invalid parameters: {}'.format(e))
 
 
 # TODO: COMBINE INTO ONE 'LOCATION' ENDPOINT? OR ADD AS SELECTION PARAMS ON USER AND VIEW ENDPOINTS?
@@ -47,16 +40,11 @@ def get_views():
 def get_countries():
     """Query on number of views per country."""
     try:
-        args = argparser.parse_args(
-            request.args,
-            req_start_date=True,
-            req_end_date=True,
-            req_classification=True,
-        )
-        res = queries.get_countries(args.start_date, args.end_date, args.classification.is_bot())
+        contract: DataRequestContract = DataRequestContract.get_schema().load(request.args)
+        res = queries.get_countries(contract.start_date, contract.end_date, contract.classification)
         return jsonify(res)
-    except ValueError as e:
-        return Response(str(e), status=400)
+    except marshmallow.exceptions.ValidationError as e:
+        return Response(status=400, response='Invalid parameters: {}'.format(e))
 
 
 @blueprint.route('/cities')
@@ -64,16 +52,11 @@ def get_countries():
 def get_cities():
     """Query on number of views per city."""
     try:
-        args = argparser.parse_args(
-            request.args,
-            req_start_date=True,
-            req_end_date=True,
-            req_classification=True,
-        )
-        res = queries.get_cities(args.start_date, args.end_date, args.classification.is_bot())
+        contract: DataRequestContract = DataRequestContract.get_schema().load(request.args)
+        res = queries.get_cities(contract.start_date, contract.end_date, contract.classification)
         return jsonify(res)
-    except ValueError as e:
-        return Response(str(e), status=400)
+    except marshmallow.exceptions.ValidationError as e:
+        return Response(status=400, response='Invalid parameters: {}'.format(e))
 
 
 @blueprint.route('/urls')
@@ -81,16 +64,11 @@ def get_cities():
 def get_urls():
     """Query on number of views per URL."""
     try:
-        args = argparser.parse_args(
-            request.args,
-            req_start_date=True,
-            req_end_date=True,
-            req_classification=True,
-        )
-        res = queries.get_urls(args.start_date, args.end_date, args.classification.is_bot())
+        contract: DataRequestContract = DataRequestContract.get_schema().load(request.args)
+        res = queries.get_urls(contract.start_date, contract.end_date, contract.classification)
         return jsonify(res)
-    except ValueError as e:
-        return Response(str(e), status=400)
+    except marshmallow.exceptions.ValidationError as e:
+        return Response(status=400, response='Invalid parameters: {}'.format(e))
 
 
 # TODO: PERHAPS COMBINE INTO THE /USERS ENDPOINT
@@ -99,13 +77,8 @@ def get_urls():
 def get_hostnames():
     """Query on number of views by hostname."""
     try:
-        args = argparser.parse_args(
-            request.args,
-            req_start_date=True,
-            req_end_date=True,
-            req_classification=True,
-        )
-        res = queries.get_hostnames(args.start_date, args.end_date, args.classification.is_bot())
+        contract: DataRequestContract = DataRequestContract.get_schema().load(request.args)
+        res = queries.get_hostnames(contract.start_date, contract.end_date, contract.classification)
         return jsonify(res)
-    except ValueError as e:
-        return Response(str(e), status=400)
+    except marshmallow.exceptions.ValidationError as e:
+        return Response(status=400, response='Invalid parameters: {}'.format(e))
