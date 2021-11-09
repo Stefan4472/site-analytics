@@ -19,8 +19,6 @@ Install the required packages for the Flask instance:
 pip install -r requirements.txt
 ```
 
-NOTE: for some reason, the `python-dotenv` package doesn't install properly on the default version of pip (`pip-9.0.1`). If you have problems later, just update pip (`python -m pip install --upgrade pip`) and reinstall `requirements.txt`. 
-
 Setup a `.flaskenv` configuration file. In the `flaskr` folder, create a simple file called `.flaskenv` and enter the following:
 ```
 FLASK_APP=.
