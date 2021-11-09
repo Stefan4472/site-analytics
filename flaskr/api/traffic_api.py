@@ -1,11 +1,13 @@
 import datetime
 import pathlib
 import time
+import marshmallow
 from flask import Blueprint, current_app, request, Response
 from flask_login import login_required
 from flaskr import db
 from flaskr.models.user import User
 from flaskr.models.view import View
+from flaskr.contracts.report_traffic import ReportTrafficContract
 '''
 TODO: SEND A 'WEEKLY REPORT' EMAIL?
 
@@ -30,31 +32,24 @@ blueprint = Blueprint('traffic', __name__, url_prefix='/api/v1/traffic')
 @blueprint.route('', methods=['POST'])
 @login_required
 def report_traffic():
-    # Ensure all other args are present
-    if 'url' not in request.json:
-        return Response('Missing "url" arg', status=400)
-    if 'ip_addr' not in request.json:
-        return Response('Missing "ip_addr" arg', status=400)
-    if 'user_agent' not in request.json:
-        return Response('Missing "user_agent" arg', status=400)
+    try:
+        contract: ReportTrafficContract = ReportTrafficContract.get_schema().load(request.json)
+    except marshmallow.exceptions.ValidationError as e:
+        return Response(status=400, response='Invalid parameters: {}'.format(e))
 
-    url = request.json['url']
-    user_ip = request.json['ip_addr']
-    user_agent = request.json['user_agent']
     request_time = datetime.datetime.now()
-
     # Write to log file
     with open(current_app.config['LOG_PATH'], 'a') as log_file:
         log_file.write('{},{},{},{}\n'.format(
             request_time,
-            url,
-            user_ip,
-            user_agent,
+            contract.url,
+            contract.ip_address,
+            contract.user_agent,
         ))
 
     # Add to database. SQL-Alchemy will escape strings before processing them.
-    user = get_or_create_user(user_ip)
-    view = View(url=url, user_agent=user_agent, timestamp=request_time)
+    user = get_or_create_user(contract.ip_address)
+    view = View(url=contract.url, user_agent=contract.user_agent, timestamp=request_time)
     view.process()
     db.session.add(user)
     db.session.add(view)
