@@ -16,12 +16,10 @@ This API is functional, but waiting for some cleanup and improved functionality.
 
 Install the required packages for the Flask instance:
 ```
-#### TODO: SET UP REQUIREMENTS.TXT
-# in the `flaskr` folder
-pip install flask
-pip install flask-login
-pip install dataclasses
+pip install -r requirements.txt
 ```
+
+NOTE: for some reason, the `python-dotenv` package doesn't install properly on the default version of pip (`pip-9.0.1`). If you have problems later, just update pip (`python -m pip install --upgrade pip`) and reinstall `requirements.txt`. 
 
 Setup a `.flaskenv` configuration file. In the `flaskr` folder, create a simple file called `.flaskenv` and enter the following:
 ```
@@ -41,7 +39,6 @@ flask init-db
 
 Run the server:
 ```
-# From `flaskr/`:
 flask run
 ```
 
@@ -50,8 +47,8 @@ flask run
 **NOTE**: All API calls must provide a header value called `Authorization`, with the value of the secret key. For example, using the `requests` module in Python:
 ```
 requests.get(
-    'http://127.0.0.1:5000/api/v1/data/unique-ips-per-week',
-    headers={'Authorization': 'dev'},
+    'http://127.0.0.1:5000/api/v1/data/users',
+    headers={'Authorization': '<YOUR SECRET KEY>'},
     params={'start_date': '2020-10-10', 'end_date': '2021-3-15'},
 )
 ```
@@ -60,7 +57,6 @@ requests.get(
 
 The website that you are recording traffic for will use the `/api/v1/traffic` POST endpoint, and provide the URL being requested, the IP address of the request, and the user agent of the request. For example, using the `requests` module in Python:
 ```
-params = {'url': '/', 'ip_addr': '127.0.0.1', 'user_agent': 'Firefox'}
 r = requests.post(
     'http://127.0.0.1:5000/api/v1/traffic', 
     headers={'Authorization': 'dev'},
@@ -71,8 +67,8 @@ r = requests.post(
 ## Data analysis
 
 The following endpoints are provided:
-- `/api/v1/data/unique-ips-per-week` (start_date, end_date)
-- `/api/v1/data/views-per-week` (start_date, end_date)
+- `/api/v1/data/users` (start_date, end_date)
+- `/api/v1/data/views` (start_date, end_date)
 - `/api/v1/data/countries` (start_date, end_date, classification)
 - `/api/v1/data/cities` (start_date, end_date, classification)
 - `/api/v1/data/urls` (start_date, end_date, classification)
