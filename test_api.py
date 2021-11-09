@@ -1,6 +1,6 @@
 import requests
 import datetime
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 '''
 Makes a request and plots the results.
 Super quickly coded and will need to be revisited.
@@ -43,17 +43,28 @@ def make_plot(
 
 
 # Make request, providing auth key
-params = {'start_date': '2020-10-10', 'end_date': '2021-3-15'}
+params = {'start_date': '2020-4-1', 'end_date': '2020-5-1', 'classification': 'BOT'}
 r = requests.get(
-    'http://127.0.0.1:5000/api/v1/data/unique-ips-per-week',
+    'http://127.0.0.1:5000/api/v1/data/users',
     headers={'Authorization': 'dev'},
     params=params,
 )
 if r.status_code == 401:
     raise ValueError('Authentication failed')
+print(r.json())
 
-dates, user_data, bot_data = parse_timeboxed_data(r.json())
-fig = make_plot(dates, user_data, bot_data, 'Unique IP Addresses per Week', x_label='Week')
-fig.show()
+params = {'start_date': '2020-4-1', 'end_date': '2020-5-1', 'classification': 'BOT'}
+r = requests.get(
+    'http://127.0.0.1:5000/api/v1/data/views',
+    headers={'Authorization': 'dev'},
+    params=params,
+)
+if r.status_code == 401:
+    raise ValueError('Authentication failed')
+print(r.json())
+
+# dates, user_data, bot_data = parse_timeboxed_data(r.json())
+# fig = make_plot(dates, user_data, bot_data, 'Unique IP Addresses per Week', x_label='Week')
+# fig.show()
 
 

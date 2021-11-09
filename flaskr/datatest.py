@@ -1,16 +1,15 @@
 import datetime as dt
-import flaskr.queries as queries
+import flaskr.processing.queries as queries
 
 
 def run():
-    print('Yo')
     start = dt.datetime(2020, 4, 1)
     end = dt.datetime(2020, 5, 1)
+    is_bot = False
 
-    """Number of unique IP addresses by-user and by-bot, per week."""
-    queries.get_users(start, end, False)
-    queries.get_views(start, end, False)
-    queries.get_countries(start, end, False)
-    queries.get_cities(start, end, False)
-    queries.get_urls(start, end, False)
-    queries.get_hostnames(start, end, False)
+    print(queries.get_users(start, end, is_bot))
+    print(queries.get_views(start, end, is_bot))
+    print(queries.get_countries(start, end, is_bot))
+    print(queries.get_cities(start, end, is_bot))
+    print(queries.get_urls(start, end, is_bot))
+    print(queries.get_hostnames(start, end, is_bot))

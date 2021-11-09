@@ -3,10 +3,9 @@ import dataclasses as dc
 
 
 @dc.dataclass
-class UserBotDateResult:
+class QuantityResult:
+    quantity: int
     date: datetime.datetime
-    user: int = None
-    bot: int = None
 
 
 @dc.dataclass
@@ -22,12 +21,12 @@ class CityResult:
 
 
 @dc.dataclass
-class PostResult:
+class UrlResult:
     url: str
     value: int
 
 
 @dc.dataclass
 class HostnameResult:
-    url: str
+    hostname: str
     value: int

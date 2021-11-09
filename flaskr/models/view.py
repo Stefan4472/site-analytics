@@ -1,5 +1,5 @@
 from flaskr import db
-from flaskr import user_agent
+from flaskr.processing import user_agent
 
 
 class View(db.Model):

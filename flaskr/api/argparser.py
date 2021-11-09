@@ -1,7 +1,15 @@
+import enum
 import datetime
 import dataclasses as dc
 import typing
-# from analyticsdb.database import Classification
+
+
+class Classification(enum.Enum):
+    BOT = 'BOT'
+    USER = 'USER'
+
+    def is_bot(self) -> bool:
+        return self == Classification.BOT
 
 
 class ParseException(Exception):
@@ -24,7 +32,7 @@ class RequestArgs:
     """
     start_date: datetime.datetime = None
     end_date: datetime.datetime = None
-    # classification: Classification = None
+    classification: Classification = None
 
 
 def parse_date(date_str: str) -> datetime:
@@ -59,7 +67,7 @@ def parse_args(
     # Create fields with default None
     parsed_start_date: typing.Optional[datetime.datetime] = None
     parsed_end_date: typing.Optional[datetime.datetime] = None
-    # parsed_classification: typing.Optional[Classification] = None
+    parsed_classification: typing.Optional[Classification] = None
 
     # Parse
     if 'start_date' in args:
@@ -72,13 +80,13 @@ def parse_args(
             parsed_end_date = parse_date(args['end_date'])
         except ValueError:
             raise ParseException('end_date in improper format')
-    # if 'classification' in args:
-    #     if args['classification'].upper() == 'USER':
-    #         parsed_classification = Classification.USER
-    #     elif args['classification'].upper() == 'BOT':
-    #         parsed_classification = Classification.BOT
-    #     else:
-    #         raise ParseException('classification is invalid')
+    if 'classification' in args:
+        if args['classification'].upper() == 'USER':
+            parsed_classification = Classification.USER
+        elif args['classification'].upper() == 'BOT':
+            parsed_classification = Classification.BOT
+        else:
+            raise ParseException('classification is invalid')
 
     if 'start_date' in args and 'end_date' in args and parsed_end_date <= parsed_start_date:
         raise ParseException('end_date must be later than start_date')
@@ -86,5 +94,5 @@ def parse_args(
     return RequestArgs(
         start_date=parsed_start_date,
         end_date=parsed_end_date,
-        # classification=parsed_classification,
+        classification=parsed_classification,
     )

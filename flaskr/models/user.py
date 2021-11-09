@@ -1,6 +1,6 @@
 from flaskr import db
-from flaskr.hostname import hostname_from_ip, domain_from_hostname, is_bot
-from flaskr.location import request_location_info
+from flaskr.processing.hostname import hostname_from_ip, domain_from_hostname, is_bot
+from flaskr.processing.location import request_location_info
 
 
 class User(db.Model):

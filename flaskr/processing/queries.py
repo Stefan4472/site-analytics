@@ -1,17 +1,16 @@
 import datetime as dt
 import sqlalchemy as sqla
 from flaskr import db
-from flaskr.models.user import User
-from flaskr.models.view import View
-# NOTE: Performance isn't a concern right now
+import flaskr.processing.dto as dto
+# TODO: MAKE INTERVALS OPTIONAL AND VARIABLE
+# TODO: FIX TIMEBOXING
 
 
-def get_users(start_date: dt.datetime, end_date: dt.datetime, is_bot: bool):
+def get_users(start_date: dt.datetime, end_date: dt.datetime, is_bot: bool) -> [dto.QuantityResult]:
     """Get unique users timeboxed by week of year."""
     # TODO: THIS QUERY ISN'T CORRECT
-    print(db.session.query(User.id))
     query = sqla.text(
-        'SELECT strftime("%Y-%W", v.timestamp) AS Week, COUNT(*) '
+        'SELECT COUNT(*), strftime("%Y-%W", v.timestamp) AS Week '
         'FROM user AS u '
         'JOIN view AS v ON v.user_id = u.id '
         'WHERE v.timestamp > :start AND v.timestamp < :end '
@@ -20,13 +19,13 @@ def get_users(start_date: dt.datetime, end_date: dt.datetime, is_bot: bool):
         'ORDER BY v.timestamp ASC'
     )
     params = {'is_bot': is_bot, 'start': start_date, 'end': end_date}
-    result = db.session.execute(query, params)
-    print(result.all())
+    results = db.session.execute(query, params)
+    return [dto.QuantityResult(*r) for r in results]
 
 
 def get_views(start_date: dt.datetime, end_date: dt.datetime, is_bot: bool):
     query = sqla.text(
-        'SELECT strftime("%Y-%W", v.timestamp) AS Week, COUNT(*) '
+        'SELECT COUNT(*), strftime("%Y-%W", v.timestamp) AS Week '
         'FROM user AS u '
         'JOIN view AS v ON v.user_id = u.id '
         'WHERE v.timestamp > :start AND v.timestamp < :end '
@@ -35,18 +34,11 @@ def get_views(start_date: dt.datetime, end_date: dt.datetime, is_bot: bool):
         'ORDER BY v.timestamp ASC'
     )
     params = {'is_bot': is_bot, 'start': start_date, 'end': end_date}
-    result = db.session.execute(query, params)
-    print(result.all())
-
-    # res = db.session.query(sqla.func.count(View.id))\
-    #     .where(View.user.was_processed)\
-    #     .where(View.user.is_bot)\
-    #     .group_by(sqla.func.strftime("%Y-%m-%d", View.timestamp))\
-    #     .all()
-    # print(res)
+    results = db.session.execute(query, params)
+    return [dto.QuantityResult(*r) for r in results]
 
 
-def get_countries(start_date: dt.datetime, end_date: dt.datetime, is_bot: bool):
+def get_countries(start_date: dt.datetime, end_date: dt.datetime, is_bot: bool) -> [dto.CountryResult]:
     # TODO: TIMEBOXXING DOESN'T WORK
     query = sqla.text(
         'SELECT country, COUNT(*) '
@@ -58,11 +50,11 @@ def get_countries(start_date: dt.datetime, end_date: dt.datetime, is_bot: bool):
         'ORDER BY COUNT(*) DESC'
     )
     params = {'is_bot': is_bot, 'start': start_date, 'end': end_date}
-    result = db.session.execute(query, params)
-    print(result.all())
+    results = db.session.execute(query, params)
+    return [dto.CountryResult(*r) for r in results]
 
 
-def get_cities(start_date: dt.datetime, end_date: dt.datetime, is_bot: bool):
+def get_cities(start_date: dt.datetime, end_date: dt.datetime, is_bot: bool) -> [dto.CityResult]:
     # TODO: TIMEBOXXING DOESN'T WORK
     query = sqla.text(
         'SELECT city, COUNT(*) '
@@ -74,11 +66,11 @@ def get_cities(start_date: dt.datetime, end_date: dt.datetime, is_bot: bool):
         'ORDER BY COUNT(*) DESC'
     )
     params = {'is_bot': is_bot, 'start': start_date, 'end': end_date}
-    result = db.session.execute(query, params)
-    print(result.all())
+    results = db.session.execute(query, params)
+    return [dto.CityResult(*r) for r in results]
 
 
-def get_urls(start_date: dt.datetime, end_date: dt.datetime, is_bot: bool):
+def get_urls(start_date: dt.datetime, end_date: dt.datetime, is_bot: bool) -> [dto.UrlResult]:
     query = sqla.text(
         'SELECT v.url, COUNT(*) '
         'FROM user AS u '
@@ -89,11 +81,11 @@ def get_urls(start_date: dt.datetime, end_date: dt.datetime, is_bot: bool):
         'ORDER BY COUNT(*) DESC'
     )
     params = {'is_bot': is_bot, 'start': start_date, 'end': end_date}
-    result = db.session.execute(query, params)
-    print(result.all())
+    results = db.session.execute(query, params)
+    return [dto.UrlResult(*r) for r in results]
 
 
-def get_hostnames(start_date: dt.datetime, end_date: dt.datetime, is_bot: bool):
+def get_hostnames(start_date: dt.datetime, end_date: dt.datetime, is_bot: bool) -> [dto.HostnameResult]:
     query = sqla.text(
         'SELECT u.domain, COUNT(*) '
         'FROM user AS u '
@@ -104,5 +96,5 @@ def get_hostnames(start_date: dt.datetime, end_date: dt.datetime, is_bot: bool):
         'ORDER BY COUNT(*) DESC'
     )
     params = {'is_bot': is_bot, 'start': start_date, 'end': end_date}
-    result = db.session.execute(query, params)
-    print(result.all())
+    results = db.session.execute(query, params)
+    return [dto.HostnameResult(*r) for r in results]

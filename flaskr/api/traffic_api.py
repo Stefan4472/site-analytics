@@ -1,13 +1,14 @@
 import datetime
 import pathlib
 import time
+import enum
 from flask import Blueprint, current_app, request, Response
 from flask_login import login_required
 from flaskr import db
 from flaskr.models.user import User
 from flaskr.models.view import View
 '''
-TODO: SEND A 'WEEKLY REPORT' EMAIL? (Or move that to a different service?)
+TODO: SEND A 'WEEKLY REPORT' EMAIL?
 
 Currently, users are defined by their IP address.
 TODO: DEFINE BY (IP_ADDRESS, USER_AGENT)
