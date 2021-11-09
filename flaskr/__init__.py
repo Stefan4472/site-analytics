@@ -41,6 +41,7 @@ def create_app():
     app.cli.add_command(init_db_command)
     app.cli.add_command(run_import_command)
     app.cli.add_command(process_users_command)
+    app.cli.add_command(process_data)
 
     return app
 
@@ -67,3 +68,10 @@ def run_import_command(logfile: str):
 @with_appcontext
 def process_users_command():
     traffic_api.process_users()
+
+
+@click.command('process-data')
+@with_appcontext
+def process_data():
+    import flaskr.datatest
+    datatest.run()

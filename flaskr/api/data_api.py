@@ -3,7 +3,6 @@ from flask_login import login_required
 from flaskr.api import argparser
 from dotenv import load_dotenv
 
-load_dotenv('.env') #the path to your .env file (or any other file of environment variables you want t
 # Create blueprint, which will be used to register URL routes
 blueprint = Blueprint('data', __name__, url_prefix='/api/v1/data')
 
