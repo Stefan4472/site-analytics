@@ -3,6 +3,12 @@ import dataclasses as dc
 
 
 @dc.dataclass
+class QueryResult:
+    quantity: int
+    date: datetime.datetime = None
+
+
+@dc.dataclass
 class QuantityResult:
     quantity: int
     date: datetime.datetime

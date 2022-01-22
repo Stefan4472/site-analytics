@@ -35,7 +35,7 @@ def create_app(test_config: SiteConfig = None):
 
     if app.config['SECRET_KEY'] is None:
         raise ValueError('No SECRET_KEY set')
-    print(app.config)
+
     app.logger.info(f'DATABASE_URI: {app.config["SQLALCHEMY_DATABASE_URI"]}')
     app.logger.info(f'LOG_PATH: {app.config["LOG_PATH"]}')
 
