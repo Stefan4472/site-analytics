@@ -12,7 +12,7 @@ class View(db.Model):
     browser = db.Column(db.String)
 
     # Associated User
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('_user.id'))
     user = db.relationship('User', back_populates='views')
 
     def process(self):

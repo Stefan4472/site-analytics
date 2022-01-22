@@ -4,67 +4,67 @@ from flaskr import db
 import flaskr.processing.dto as dto
 from flaskr.contracts.data_request import UserBotClassification
 # TODO: MAKE INTERVALS OPTIONAL AND VARIABLE
-# TODO: FIX TIMEBOXING
+# TODO: the difference between user queries and view queries is really small. Can generalize the queries, and the result DTOs
 
 
 def get_users(start_date: dt.date, end_date: dt.date, classification: UserBotClassification) -> [dto.QuantityResult]:
-    """Get unique users timeboxed by week of year."""
-    # TODO: THIS QUERY ISN'T CORRECT
+    """Get number of unique users timeboxed by month of year."""
     query = sqla.text(
-        'SELECT COUNT(*), strftime("%Y-%W", v.timestamp) AS Week '
-        'FROM user AS u '
+        'SELECT COUNT(DISTINCT u.id), EXTRACT(YEAR FROM v.timestamp) AS year, EXTRACT(MONTH FROM v.timestamp) AS month '
+        'FROM _user AS u '
         'JOIN view AS v ON v.user_id = u.id '
         'WHERE v.timestamp > :start AND v.timestamp < :end '
         'AND u.is_bot = :is_bot '
-        'GROUP BY strftime("%Y%W", v.timestamp) '
-        'ORDER BY v.timestamp ASC'
+        'GROUP BY year, month '
+        'ORDER BY year, month'
     )
     params = {'is_bot': classification.is_bot(), 'start': start_date, 'end': end_date}
     results = db.session.execute(query, params)
-    return [dto.QuantityResult(*r) for r in results]
+    return [dto.QuantityResult(r[0], dt.datetime(int(r[1]), int(r[2]), 1)) for r in results]
 
 
 def get_views(start_date: dt.date, end_date: dt.date, classification: UserBotClassification) -> [dto.QuantityResult]:
+    """Get number of views timeboxed by month of year."""
     query = sqla.text(
-        'SELECT COUNT(*), strftime("%Y-%W", v.timestamp) AS Week '
-        'FROM user AS u '
+        'SELECT COUNT(*), EXTRACT(YEAR FROM v.timestamp) AS year, EXTRACT(MONTH FROM v.timestamp) AS month '
+        'FROM _user AS u '
         'JOIN view AS v ON v.user_id = u.id '
         'WHERE v.timestamp > :start AND v.timestamp < :end '
         'AND u.is_bot = :is_bot '
-        'GROUP BY strftime("%Y%W", v.timestamp) '
-        'ORDER BY v.timestamp ASC'
+        'GROUP BY year, month '
+        'ORDER BY year, month'
     )
     params = {'is_bot': classification.is_bot(), 'start': start_date, 'end': end_date}
     results = db.session.execute(query, params)
-    return [dto.QuantityResult(*r) for r in results]
+    return [dto.QuantityResult(r[0], dt.datetime(int(r[1]), int(r[2]), 1)) for r in results]
 
 
+# TODO: probably just provide one "location" query that groups by city and country
 def get_countries(start_date: dt.date, end_date: dt.date, classification: UserBotClassification) -> [dto.CountryResult]:
-    # TODO: TIMEBOXXING DOESN'T WORK
+    """Number of unique users by country, timeboxed by month of year"""
     query = sqla.text(
-        'SELECT country, COUNT(*) '
-        'FROM user AS u '
+        'SELECT u.country, COUNT(DISTINCT u.id) AS num '
+        'FROM _user AS u '
         'JOIN view AS v ON v.user_id = u.id '
         'WHERE v.timestamp > :start AND v.timestamp < :end '
         'AND u.is_bot = :is_bot '
-        'GROUP BY country '
-        'ORDER BY COUNT(*) DESC'
+        'GROUP BY u.country '
+        'ORDER BY num DESC'
     )
     params = {'is_bot': classification.is_bot(), 'start': start_date, 'end': end_date}
     results = db.session.execute(query, params)
-    return [dto.CountryResult(*r) for r in results]
+    return [dto.CountryResult(r[0], r[1]) for r in results]
 
 
 def get_cities(start_date: dt.date, end_date: dt.date, classification: UserBotClassification) -> [dto.CityResult]:
-    # TODO: TIMEBOXXING DOESN'T WORK
     query = sqla.text(
-        'SELECT city, COUNT(*) '
-        'FROM user AS u '
+        'SELECT u.city, COUNT(DISTINCT u.id) as num '
+        'FROM _user AS u '
         'JOIN view AS v ON v.user_id = u.id '
         'WHERE v.timestamp > :start AND v.timestamp < :end '
         'AND u.is_bot = :is_bot '
-        'GROUP BY city '
-        'ORDER BY COUNT(*) DESC'
+        'GROUP BY u.city '
+        'ORDER BY num DESC'
     )
     params = {'is_bot': classification.is_bot(), 'start': start_date, 'end': end_date}
     results = db.session.execute(query, params)
@@ -72,14 +72,15 @@ def get_cities(start_date: dt.date, end_date: dt.date, classification: UserBotCl
 
 
 def get_urls(start_date: dt.date, end_date: dt.date, classification: UserBotClassification) -> [dto.UrlResult]:
+    """Return number of views per URL, timeboxed by month of year."""
     query = sqla.text(
-        'SELECT v.url, COUNT(*) '
-        'FROM user AS u '
+        'SELECT v.url, COUNT(*) AS num '
+        'FROM _user AS u '
         'JOIN view AS v on v.user_id = u.id '
         'WHERE v.timestamp > :start AND v.timestamp < :end '
         'AND u.is_bot = :is_bot '
         'GROUP BY v.url '
-        'ORDER BY COUNT(*) DESC'
+        'ORDER BY num DESC'
     )
     params = {'is_bot': classification.is_bot(), 'start': start_date, 'end': end_date}
     results = db.session.execute(query, params)
@@ -88,13 +89,13 @@ def get_urls(start_date: dt.date, end_date: dt.date, classification: UserBotClas
 
 def get_hostnames(start_date: dt.date, end_date: dt.date, classification: UserBotClassification) -> [dto.HostnameResult]:
     query = sqla.text(
-        'SELECT u.domain, COUNT(*) '
-        'FROM user AS u '
+        'SELECT u.domain, COUNT(*) AS num '
+        'FROM _user AS u '
         'JOIN view AS v ON v.user_id = u.id '
         'WHERE v.timestamp > :start AND v.timestamp < :end '
         'AND u.is_bot = :is_bot '
-        'GROUP BY u.country '
-        'ORDER BY COUNT(*) DESC'
+        'GROUP BY u.domain '
+        'ORDER BY num DESC'
     )
     params = {'is_bot': classification.is_bot(), 'start': start_date, 'end': end_date}
     results = db.session.execute(query, params)
