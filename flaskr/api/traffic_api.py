@@ -79,6 +79,7 @@ def process_data():
     db.session.commit()
 
 
+# TODO: move this into its own script
 def run_import(logfile: pathlib.Path):
     current_app.logger.info('Running import on logfile {}'.format(logfile.absolute()))
     with open(logfile) as f:

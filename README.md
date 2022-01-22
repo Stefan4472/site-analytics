@@ -1,6 +1,6 @@
 # site-analytics
 
-An API used to record a website's traffic and analyze the results. Implemented with Python 3.6 Flask.
+An API used to record a website's traffic and analyze the results. Implemented with Python 3.6 using Flask and PostgreSQL13.
 
 # Overview
 
@@ -14,21 +14,33 @@ This API is functional, but waiting for some cleanup and improved functionality.
 
 # Setup
 
-Install the required packages for the Flask instance:
+Install Postgres 13. We use `SQLAlchemy` along with the `psycopg2` library to access the database (these are included in the `requirements.txt`).
+
+Install the required packages:
 ```
 pip install -r requirements.txt
 ```
 
-Setup a `.flaskenv` configuration file. In the `flaskr` folder, create a simple file called `.flaskenv` and enter the following:
+Create a postgres database to use. I recommend calling it `siteanalytics`
+```
+# Execute in psql, for example
+CREATE DATABASE siteanalytics;
+```
+
+Setup a `.flaskenv` configuration file. The values you set here will automatically be stored as environment variables when you run Flask, and will be used to configure the website. In the `flaskr` folder, create a simple file called `.flaskenv` and enter the following:
 ```
 FLASK_APP=.
 FLASK_ENV=development
 SECRET_KEY=<YOUR SECRET KEY HERE>
+POSTGRES_USERNAME=<POSTGRES USERNAME TO USE>
+POSTGRES_PASSWORD=<PASSWORD FOR POSTGRES USERNAME>
+POSTGRES_HOST=<POSTGRES HOST, e.g. 127.0.0.1>
+POSTGRES_PORT=<POSTGRES PORT>
+POSTGRES_DATABASE_NAME=<NAME OF POSTGRES DATABASE YOU CREATED>
 ```
 
 Make sure to set your secret key to something... secret. It will be used to authenticate API calls.
 
-The `FLASK_APP` and `FLASK_ENV` parameters are used to automatically configure your `flask` command. Now, to run the server, you can just call `flask run` from the `flaskr` directory.
 
 Now create the database instance:
 ```
@@ -39,6 +51,8 @@ Run the server:
 ```
 flask run
 ```
+
+The values you set in the `.flaskenv` will automatically be used to configure the server.
 
 # Usage
 

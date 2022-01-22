@@ -1,44 +1,43 @@
 import pathlib
 from flask import Flask
-from dotenv import load_dotenv
-from . import settings
+from .config import SiteConfig
 from . import auth
 from .database import db
 from .api import traffic_api, data_api
 from . import cli
 
 
-def create_app(test_config: dict = None):
+def create_app(test_config: SiteConfig = None):
     """Create and configure the Flask app."""
-    print(test_config)
-    # Load environment variables
-    load_dotenv('.flaskenv')
-
     app = Flask(__name__, instance_relative_config=True)
     instance_path = pathlib.Path(app.instance_path)
     instance_path.mkdir(exist_ok=True)
 
-    # Setup `current_app` config
-    app.config.from_mapping(settings.load_from_env())
-    app.config['DATABASE_PATH'] = instance_path / 'database.sqlite'
-    app.config['LOG_PATH'] = instance_path / 'traffic-log.csv'
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + str(app.config['DATABASE_PATH'].absolute())
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-    if test_config:
-        app.config.update(test_config)
-        print(app.config)
+    # TODO: update unit tests
+    # Set configuration. Use `test_config` if provided, otherwise load
+    # from environment variables (i.e. flaskenv)
+    provided_config = \
+        test_config if test_config else SiteConfig.load_from_env('.flaskenv')
+    app.config['SECRET_KEY'] = provided_config.secret_key
+    app.config['POSTGRES_USERNAME'] = provided_config.postgres_username
+    app.config['POSTGRES_PASSWORD'] = provided_config.postgres_password
+    app.config['POSTGRES_HOST'] = provided_config.postgres_host
+    app.config['POSTGRES_PORT'] = provided_config.postgres_port
+    app.config['POSTGRES_DATABASE_NAME'] = provided_config.database_name
+    app.config['LOG_PATH'] = provided_config.log_path \
+        if provided_config.log_path else instance_path / 'traffic-log.csv'
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = \
+        bool(provided_config.sqlalchemy_track_modifications)
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'postgresql+psycopg2://'\
+        f'{provided_config.postgres_username}:{provided_config.postgres_password}'\
+        f'@{provided_config.postgres_host}:{provided_config.postgres_port}'\
+        f'/{provided_config.database_name}'
 
     if app.config['SECRET_KEY'] is None:
-        raise ValueError('SECRET_KEY was not set. Please see the README for instructions on how to setup a .flaskenv file.')
-
-    app.logger.info('DATABASE_PATH: {}'.format(app.config['DATABASE_PATH']))
-    app.logger.info('LOG_PATH: {}'.format(app.config['LOG_PATH']))
-    app.logger.info('SECRET_KEY: {}'.format(app.config['SECRET_KEY']))
-
-    if not app.config['DATABASE_PATH'].exists():
-        app.logger.warning('WARNING: No database found. Make sure to run `flask init-db`!')
-
+        raise ValueError('No SECRET_KEY set')
+    print(app.config)
+    app.logger.info(f'DATABASE_URI: {app.config["SQLALCHEMY_DATABASE_URI"]}')
+    app.logger.info(f'LOG_PATH: {app.config["LOG_PATH"]}')
 
     # Init flask addons
     auth.login_manager.init_app(app)
@@ -50,6 +49,7 @@ def create_app(test_config: dict = None):
 
     # Register click commands
     app.cli.add_command(cli.init_db_command)
+    app.cli.add_command(cli.reset_db_command)
     app.cli.add_command(cli.run_import_command)
     app.cli.add_command(cli.process_data)
     app.cli.add_command(cli.debug_noodling)

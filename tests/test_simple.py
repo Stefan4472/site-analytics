@@ -4,21 +4,32 @@ import pytest
 import pathlib
 from flaskr import create_app
 from flaskr import db
+from flaskr.config import SiteConfig
+
+
+# TODO: SET UP A .FLASKENV FOR TESTING
+PYTEST_SECRET_KEY = 'dev'
+PYTEST_POSTGRES_USERNAME = '<INSERT_TESTER_USERNAME>'
+PYTEST_POSTGRES_PASSWORD = '<INSERT_TESTER_PASSWORD>'
+PYTEST_POSTGRES_HOST = '127.0.0.1'
+PYTEST_POSTGRES_PORT = 5433
+PYTEST_POSTGRES_DATABASE_NAME = 'test_siteanalytics'
 
 
 @pytest.fixture
 def client():
-    # Create temporary files for SQLite database and logging
-    db_fd, db_path = tempfile.mkstemp()
+    # Create temporary file for logging
     log_fd, log_path = tempfile.mkstemp()
 
-    # TODO: SET UP A .FLASKENV FOR TESTING
-    app = create_app({
-        'SECRET_KEY': 'Test',
-        'DATABASE_PATH': pathlib.Path(db_path),
-        'LOG_PATH': pathlib.Path(log_path),
-        'SQLALCHEMY_DATABASE_URI': 'sqlite:///' + db_path,
-    })
+    app = create_app(SiteConfig(
+        PYTEST_SECRET_KEY,
+        PYTEST_POSTGRES_USERNAME,
+        PYTEST_POSTGRES_PASSWORD,
+        PYTEST_POSTGRES_HOST,
+        PYTEST_POSTGRES_PORT,
+        PYTEST_POSTGRES_DATABASE_NAME,
+        log_path=pathlib.Path(log_path),
+    ))
 
     with app.test_client() as client:
         with app.app_context():
@@ -26,8 +37,8 @@ def client():
             db.create_all()
         yield client
 
-    os.close(db_fd)
-    os.unlink(db_path)
+    os.close(log_fd)
+    os.unlink(log_path)
 
 
 def test_traffic(client):
@@ -36,7 +47,7 @@ def test_traffic(client):
         'url': '/',
         'ip_address': '1234',
         'user_agent': 'Pytest',
-    }, headers={'Authorization': 'Test'})
+    }, headers={'Authorization': PYTEST_SECRET_KEY})
     assert res.status == '200 OK'
 
 
@@ -45,6 +56,6 @@ def test_users(client):
         'start_date': '2020-04-01',
         'end_date': '2020-05-01',
         'classification': 'BOT',
-    }, headers={'Authorization': 'Test'})
+    }, headers={'Authorization': PYTEST_SECRET_KEY})
     assert res.status == '200 OK'
     assert res.data == b'[]\n'
