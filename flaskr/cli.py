@@ -48,18 +48,19 @@ def debug_noodling():
     import datetime as dt
     import flaskr.processing.queries as queries
     from flaskr.contracts.data_request import UserBotClassification
-    from flaskr.processing.queries import QueryResolution
+    from flaskr.processing.queries import QueryResolution, QueryWhat
     start = dt.datetime(2020, 4, 1)
     end = dt.datetime(2022, 5, 1)
     classification = UserBotClassification.BOT
 
-    print(queries.get_data(start, end, classification=classification, resolution=QueryResolution.AllTime))
-    print(queries.get_data(start, end, classification=classification, resolution=QueryResolution.Day))
-    print(queries.get_data(start, end, classification=classification, resolution=QueryResolution.Week))
-    print(queries.get_data(start, end, classification=classification, resolution=QueryResolution.Month))
-    print(queries.get_data(start, end, classification=classification, resolution=QueryResolution.Year))
-    # print(queries.get_views(start, end, classification))
-    # print(queries.get_countries(start, end, classification))
-    # print(queries.get_cities(start, end, classification))
-    # print(queries.get_urls(start, end, classification))
-    # print(queries.get_hostnames(start, end, classification))
+    print(queries.query_users(QueryWhat.Country, classification, start, end, QueryResolution.AllTime))
+    print(queries.query_users(QueryWhat.Country, classification, start, end, QueryResolution.Day))
+    print(queries.query_users(QueryWhat.Country, classification, start, end, QueryResolution.Week))
+    print(queries.query_users(QueryWhat.Country, classification, start, end, QueryResolution.Month))
+    print(queries.query_users(QueryWhat.Country, classification, start, end, QueryResolution.Year))
+
+    print(queries.query_views(QueryWhat.Country, classification, start, end, QueryResolution.AllTime))
+    print(queries.query_views(QueryWhat.Country, classification, start, end, QueryResolution.Day))
+    print(queries.query_views(QueryWhat.Country, classification, start, end, QueryResolution.Week))
+    print(queries.query_views(QueryWhat.Country, classification, start, end, QueryResolution.Month))
+    print(queries.query_views(QueryWhat.Country, classification, start, end, QueryResolution.Year))

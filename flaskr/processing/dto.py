@@ -6,6 +6,7 @@ import dataclasses as dc
 class QueryResult:
     quantity: int
     date: datetime.datetime = None
+    key: str = None
 
 
 @dc.dataclass
