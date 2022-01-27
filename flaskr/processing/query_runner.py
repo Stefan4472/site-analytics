@@ -2,6 +2,7 @@ import sqlalchemy.engine
 import sqlalchemy as sqla
 import datetime as dt
 from enum import Enum
+from typing import Optional
 from flaskr.contracts.data_request import UserBotClassification
 import flaskr.processing.util as util
 from flaskr.processing.dto import QueryResult
@@ -22,6 +23,24 @@ class QueryWhat(Enum):
     Domain = 'Domain'
     OperatingSystem = 'OperatingSystem'
     # TODO: remaining user-agent infos
+
+    def get_column_name(self) -> Optional[str]:
+        if self == QueryWhat.Nothing:
+            return None
+        elif self == QueryWhat.Country:
+            return '_user.country'
+        elif self == QueryWhat.City:
+            return '_user.city'
+        elif self == QueryWhat.Region:
+            return '_user.region'
+        elif self == QueryWhat.Url:
+            return 'view.url'
+        elif self == QueryWhat.Domain:
+            return '_user.domain'
+        elif self == QueryWhat.OperatingSystem:
+            return 'view.operating_system'
+        else:
+            raise ValueError('Not implemented')
 
 
 class QueryResolution(Enum):
@@ -75,7 +94,8 @@ class QueryRunner:
         else:
             query_string = 'SELECT COUNT(*) AS cnt'
 
-        # TODO: could bypass this by providing a QueryWhat.get_col_name()
+        # Note: this is verbose in the hopes of making it easier to understand
+        '''Column extraction'''
         if self.query_what == QueryWhat.Nothing:
             pass
         elif self.query_what == QueryWhat.Country:
@@ -93,6 +113,7 @@ class QueryRunner:
         else:
             raise ValueError('Unsupported "Query.What"')
 
+        '''Date extraction'''
         if self.resolution == QueryResolution.Day:
             query_string += ', EXTRACT(YEAR FROM view.timestamp) AS year, EXTRACT(DOY FROM view.timestamp) AS day'
         elif self.resolution == QueryResolution.Week:
@@ -107,17 +128,9 @@ class QueryRunner:
             'WHERE view.timestamp > :start AND view.timestamp < :end ' \
             'AND _user.is_bot = :is_bot'
 
-        if self.resolution == QueryResolution.Day:
-            query_string += ' GROUP BY year, day'
-        elif self.resolution == QueryResolution.Week:
-            query_string += ' GROUP BY year, week'
-        elif self.resolution == QueryResolution.Month:
-            query_string += ' GROUP BY year, month'
-        elif self.resolution == QueryResolution.Year:
-            query_string += ' GROUP BY year'
-
-        # Depending on whether we already had a GROUP BY
+        '''GROUP BY'''
         if self.resolution == QueryResolution.AllTime:
+            # No GROUP BY date--just group by the selected column
             if self.query_what == QueryWhat.Country:
                 query_string += ' GROUP BY _user.country'
             elif self.query_what == QueryWhat.City:
@@ -131,6 +144,16 @@ class QueryRunner:
             elif self.query_what == QueryWhat.OperatingSystem:
                 query_string += ' GROUP BY view.operating_system'
         else:
+            # GROUP BY date, then the selected column
+            if self.resolution == QueryResolution.Day:
+                query_string += ' GROUP BY year, day'
+            elif self.resolution == QueryResolution.Week:
+                query_string += ' GROUP BY year, week'
+            elif self.resolution == QueryResolution.Month:
+                query_string += ' GROUP BY year, month'
+            elif self.resolution == QueryResolution.Year:
+                query_string += ' GROUP BY year'
+
             if self.query_what == QueryWhat.Country:
                 query_string += ', _user.country'
             elif self.query_what == QueryWhat.City:
@@ -144,27 +167,44 @@ class QueryRunner:
             elif self.query_what == QueryWhat.OperatingSystem:
                 query_string += ', view.operating_system'
 
-        if self.resolution == QueryResolution.Day:
-            query_string += ' ORDER BY year, day'
-        elif self.resolution == QueryResolution.Week:
-            query_string += ' ORDER BY year, week'
-        elif self.resolution == QueryResolution.Month:
-            query_string += ' ORDER BY year, month'
-        elif self.resolution == QueryResolution.Year:
-            query_string += ' ORDER BY year'
+        '''ORDER BY'''
+        if self.resolution == QueryResolution.AllTime:
+            # No ORDER BY date--just order by selected column
+            if self.query_what == QueryWhat.Nothing:
+                query_string += ' ORDER BY cnt'
+            if self.query_what == QueryWhat.Country:
+                query_string += ' ORDER BY _user.country'
+            elif self.query_what == QueryWhat.Region:
+                query_string += ' ORDER BY _user.region'
+            elif self.query_what == QueryWhat.Url:
+                query_string += ' ORDER BY view.url'
+            elif self.query_what == QueryWhat.Domain:
+                query_string += ' ORDER BY _user.domain'
+            elif self.query_what == QueryWhat.OperatingSystem:
+                query_string += ' ORDER BY view.operating_system'
+        else:
+            # ORDER BY date, then by selected column
+            if self.resolution == QueryResolution.Day:
+                query_string += ' ORDER BY year, day'
+            elif self.resolution == QueryResolution.Week:
+                query_string += ' ORDER BY year, week'
+            elif self.resolution == QueryResolution.Month:
+                query_string += ' ORDER BY year, month'
+            elif self.resolution == QueryResolution.Year:
+                query_string += ' ORDER BY year'
 
-        if self.query_what == QueryWhat.Nothing:
-            query_string += ', cnt'
-        if self.query_what == QueryWhat.Country:
-            query_string += ', _user.country'
-        elif self.query_what == QueryWhat.Region:
-            query_string += ', _user.region'
-        elif self.query_what == QueryWhat.Url:
-            query_string += ', view.url'
-        elif self.query_what == QueryWhat.Domain:
-            query_string += ', _user.domain'
-        elif self.query_what == QueryWhat.OperatingSystem:
-            query_string += ', view.operating_system'
+            if self.query_what == QueryWhat.Nothing:
+                query_string += ', cnt'
+            if self.query_what == QueryWhat.Country:
+                query_string += ', _user.country'
+            elif self.query_what == QueryWhat.Region:
+                query_string += ', _user.region'
+            elif self.query_what == QueryWhat.Url:
+                query_string += ', view.url'
+            elif self.query_what == QueryWhat.Domain:
+                query_string += ', _user.domain'
+            elif self.query_what == QueryWhat.OperatingSystem:
+                query_string += ', view.operating_system'
 
         return query_string
 

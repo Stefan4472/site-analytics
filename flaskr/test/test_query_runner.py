@@ -13,7 +13,8 @@ def test_count_users_all_time():
         'SELECT COUNT(DISTINCT _user.id) AS cnt '\
         'FROM _user JOIN view ON view.user_id = _user.id '\
         'WHERE view.timestamp > :start AND view.timestamp < :end '\
-        'AND _user.is_bot = :is_bot, cnt'
+        'AND _user.is_bot = :is_bot ' \
+        'ORDER BY cnt'
     assert expected_query == builder._make_query()
 
 
@@ -75,7 +76,8 @@ def test_country_views_all_time():
         'FROM _user JOIN view ON view.user_id = _user.id '\
         'WHERE view.timestamp > :start AND view.timestamp < :end '\
         'AND _user.is_bot = :is_bot ' \
-        'GROUP BY _user.country'
+        'GROUP BY _user.country ' \
+        'ORDER BY _user.country'
     assert expected_query == builder._make_query()
 
 
