@@ -38,7 +38,9 @@ class QueryRunner:
 
     This is pretty complicated, but it's the only feasible way to cover
     all TimePeriod * Selection combinations. I don't know if this will
-    be the go-to way long term.
+    be the way-to-go long term, because it makes schema changes tough.
+
+    See `test_query_runner.py` for examples of generated queries.
     """
     def __init__(
             self,
@@ -92,11 +94,11 @@ class QueryRunner:
             raise ValueError('Unsupported "Query.What"')
 
         if self.resolution == QueryResolution.Day:
-            query_string += ', EXTRACT(YEAR FROM view.timestamp) AS year, EXTRACT (DOY FROM view.timestamp) AS day'
+            query_string += ', EXTRACT(YEAR FROM view.timestamp) AS year, EXTRACT(DOY FROM view.timestamp) AS day'
         elif self.resolution == QueryResolution.Week:
-            query_string += ', EXTRACT(YEAR FROM view.timestamp) AS year, EXTRACT (WEEK FROM view.timestamp) AS week'
+            query_string += ', EXTRACT(YEAR FROM view.timestamp) AS year, EXTRACT(WEEK FROM view.timestamp) AS week'
         elif self.resolution == QueryResolution.Month:
-            query_string += ', EXTRACT(YEAR FROM view.timestamp) AS year, EXTRACT (MONTH FROM view.timestamp) AS month'
+            query_string += ', EXTRACT(YEAR FROM view.timestamp) AS year, EXTRACT(MONTH FROM view.timestamp) AS month'
         elif self.resolution == QueryResolution.Year:
             query_string += ', EXTRACT(YEAR FROM view.timestamp) AS year'
 
