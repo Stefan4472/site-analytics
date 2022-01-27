@@ -88,32 +88,21 @@ class QueryRunner:
         return self._make_results(result)
 
     def _make_query(self) -> str:
-        """Dynamically build the query. This is a little hairy."""
+        """
+        Dynamically build the query. This is a little hairy. I've done my
+        best to make it readable. There are still some logic simplifications
+        that could be done in the GROUP BY section.
+        """
         if self.query_on == QueryOn.Users:
             query_string = 'SELECT COUNT(DISTINCT _user.id) AS cnt'
         else:
             query_string = 'SELECT COUNT(*) AS cnt'
 
-        # Note: this is verbose in the hopes of making it easier to understand
-        '''Column extraction'''
-        if self.query_what == QueryWhat.Nothing:
-            pass
-        elif self.query_what == QueryWhat.Country:
-            query_string += ', _user.country'
-        elif self.query_what == QueryWhat.City:
-            query_string += ', _user.city'
-        elif self.query_what == QueryWhat.Region:
-            query_string += ', _user.region'
-        elif self.query_what == QueryWhat.Url:
-            query_string += ', view.url'
-        elif self.query_what == QueryWhat.Domain:
-            query_string += ', _user.domain'
-        elif self.query_what == QueryWhat.OperatingSystem:
-            query_string += ', view.operating_system'
-        else:
-            raise ValueError('Unsupported "Query.What"')
+        # Select specified "QueryWhat" column
+        if self.query_what != QueryWhat.Nothing:
+            query_string += ', ' + self.query_what.get_column_name()
 
-        '''Date extraction'''
+        # Select date values for "QueryResolution" (if resolution != AllTime)
         if self.resolution == QueryResolution.Day:
             query_string += ', EXTRACT(YEAR FROM view.timestamp) AS year, EXTRACT(DOY FROM view.timestamp) AS day'
         elif self.resolution == QueryResolution.Week:
@@ -128,83 +117,41 @@ class QueryRunner:
             'WHERE view.timestamp > :start AND view.timestamp < :end ' \
             'AND _user.is_bot = :is_bot'
 
-        '''GROUP BY'''
-        if self.resolution == QueryResolution.AllTime:
-            # No GROUP BY date--just group by the selected column
-            if self.query_what == QueryWhat.Country:
-                query_string += ' GROUP BY _user.country'
-            elif self.query_what == QueryWhat.City:
-                query_string += ' GROUP BY _user.city'
-            elif self.query_what == QueryWhat.Region:
-                query_string += ' GROUP BY _user.region'
-            elif self.query_what == QueryWhat.Url:
-                query_string += ' GROUP BY view.url'
-            elif self.query_what == QueryWhat.Domain:
-                query_string += ' GROUP BY _user.domain'
-            elif self.query_what == QueryWhat.OperatingSystem:
-                query_string += ' GROUP BY view.operating_system'
+        # Assemble GROUP BY (unless resolution == AllTime and QueryWhat == Nothing)
+        if not (self.resolution == QueryResolution.AllTime and self.query_what == QueryWhat.Nothing):
+            query_string += ' GROUP BY '
+            if self.resolution == QueryResolution.AllTime:
+                # No dates involved: just GROUP BY the selected column
+                query_string += self.query_what.get_column_name()
+            else:
+                # GROUP BY date first
+                if self.resolution == QueryResolution.Day:
+                    query_string += 'year, day'
+                elif self.resolution == QueryResolution.Week:
+                    query_string += 'year, week'
+                elif self.resolution == QueryResolution.Month:
+                    query_string += 'year, month'
+                elif self.resolution == QueryResolution.Year:
+                    query_string += 'year'
+                # Then GROUP BY selected column
+                if self.query_what != QueryWhat.Nothing:
+                    query_string += ', ' + self.query_what.get_column_name()
+
+        query_string += ' ORDER BY '
+        # ORDER BY date if resolution != AllTime
+        if self.resolution == QueryResolution.Day:
+            query_string += 'year, day, '
+        elif self.resolution == QueryResolution.Week:
+            query_string += 'year, week, '
+        elif self.resolution == QueryResolution.Month:
+            query_string += 'year, month, '
+        elif self.resolution == QueryResolution.Year:
+            query_string += 'year, '
+        # Then order by "QueryWhat" column
+        if self.query_what == QueryWhat.Nothing:
+            query_string += 'cnt'
         else:
-            # GROUP BY date, then the selected column
-            if self.resolution == QueryResolution.Day:
-                query_string += ' GROUP BY year, day'
-            elif self.resolution == QueryResolution.Week:
-                query_string += ' GROUP BY year, week'
-            elif self.resolution == QueryResolution.Month:
-                query_string += ' GROUP BY year, month'
-            elif self.resolution == QueryResolution.Year:
-                query_string += ' GROUP BY year'
-
-            if self.query_what == QueryWhat.Country:
-                query_string += ', _user.country'
-            elif self.query_what == QueryWhat.City:
-                query_string += ', _user.city'
-            elif self.query_what == QueryWhat.Region:
-                query_string += ', _user.region'
-            elif self.query_what == QueryWhat.Url:
-                query_string += ', view.url'
-            elif self.query_what == QueryWhat.Domain:
-                query_string += ', _user.domain'
-            elif self.query_what == QueryWhat.OperatingSystem:
-                query_string += ', view.operating_system'
-
-        '''ORDER BY'''
-        if self.resolution == QueryResolution.AllTime:
-            # No ORDER BY date--just order by selected column
-            if self.query_what == QueryWhat.Nothing:
-                query_string += ' ORDER BY cnt'
-            if self.query_what == QueryWhat.Country:
-                query_string += ' ORDER BY _user.country'
-            elif self.query_what == QueryWhat.Region:
-                query_string += ' ORDER BY _user.region'
-            elif self.query_what == QueryWhat.Url:
-                query_string += ' ORDER BY view.url'
-            elif self.query_what == QueryWhat.Domain:
-                query_string += ' ORDER BY _user.domain'
-            elif self.query_what == QueryWhat.OperatingSystem:
-                query_string += ' ORDER BY view.operating_system'
-        else:
-            # ORDER BY date, then by selected column
-            if self.resolution == QueryResolution.Day:
-                query_string += ' ORDER BY year, day'
-            elif self.resolution == QueryResolution.Week:
-                query_string += ' ORDER BY year, week'
-            elif self.resolution == QueryResolution.Month:
-                query_string += ' ORDER BY year, month'
-            elif self.resolution == QueryResolution.Year:
-                query_string += ' ORDER BY year'
-
-            if self.query_what == QueryWhat.Nothing:
-                query_string += ', cnt'
-            if self.query_what == QueryWhat.Country:
-                query_string += ', _user.country'
-            elif self.query_what == QueryWhat.Region:
-                query_string += ', _user.region'
-            elif self.query_what == QueryWhat.Url:
-                query_string += ', view.url'
-            elif self.query_what == QueryWhat.Domain:
-                query_string += ', _user.domain'
-            elif self.query_what == QueryWhat.OperatingSystem:
-                query_string += ', view.operating_system'
+            query_string += self.query_what.get_column_name()
 
         return query_string
 

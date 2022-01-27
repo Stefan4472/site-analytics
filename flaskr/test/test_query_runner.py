@@ -7,6 +7,7 @@ of parameters, so I created two separate test spreads that cover
 the main query types.
 """
 
+
 def test_count_users_all_time():
     builder = QueryRunner(QueryOn.Users, QueryWhat.Nothing, QueryResolution.AllTime)
     expected_query = \
