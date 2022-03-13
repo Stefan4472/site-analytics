@@ -1,7 +1,7 @@
 from flask import current_app
 from flaskr import db
-from flaskr.processing.hostname import hostname_from_ip, domain_from_hostname, is_bot
-from flaskr.processing.location import request_location_info
+from flaskr.processing.hostname import lookup_hostname, domain_from_hostname, is_bot
+from flaskr.processing.location import lookup_location
 
 
 class User(db.Model):
@@ -24,35 +24,34 @@ class User(db.Model):
         """
         Process and update the User's data.
 
-        Can throw ValueError. Does NOT process the User's Views.
+        Throws ValueError if unable to process.
         """
-        current_app.logger.info('Processing User {} (numViews = {})'.format(self.id, len(self.views)))
         try:
-            hostname = hostname_from_ip(self.ip_address)
-            current_app.logger.info('Got hostname {}'.format(hostname))
+            hostname = lookup_hostname(self.ip_address)
+            print('Got hostname {}'.format(hostname))
             self.hostname = hostname
             self.domain = domain_from_hostname(hostname)
-        except ValueError as e:
+        except ValueError:
             # Hostname exceptions aren't critical.
             # Some IP addresses don't have a valid DNS record.
-            current_app.logger.info('Error getting hostname: {}'.format(e))
+            pass
 
-        location = request_location_info(self.ip_address)
-        current_app.logger.info('Got location {}'.format(location))
-        self.city = location.city
-        self.region = location.region_name
-        self.country = location.country_name
-
-        for view in self.views:
-            view.process()
+        try:
+            location = lookup_location(self.ip_address)
+            print('Got location {}'.format(location))
+            self.city = location.city
+            self.region = location.region_name
+            self.country = location.country_name
+        except ValueError as e:
+            raise e
 
         self.is_bot = self._check_is_bot()
-        current_app.logger.info('is_bot = {}'.format(self.is_bot))
+        print('is_bot = {}'.format(self.is_bot))
         self.was_processed = True
 
     def _check_is_bot(self) -> bool:
         """Decides whether this User is a bot. Call after determining hostname."""
-        if any(v.is_bot() for v in self.views):
+        if any(v.is_bot() for v in self.my_views):
             return True
         elif is_bot(self.hostname):
             return True
@@ -62,9 +61,9 @@ class User(db.Model):
             return False
 
     def _calc_requests_per_second(self) -> float:
-        if self.views:
-            time_diff = self.views[-1].timestamp - self.views[0].timestamp
-            return time_diff.total_seconds() / len(self.views)
+        if self.my_views:
+            time_diff = self.my_views[-1].timestamp - self.my_views[0].timestamp
+            return time_diff.total_seconds() / len(self.my_views)
         else:
             return 0
 

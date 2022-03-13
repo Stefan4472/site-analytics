@@ -1,6 +1,6 @@
 import user_agents
+from datetime import datetime
 from flaskr import db
-from flaskr.processing import user_agent
 
 
 class View(db.Model):
@@ -15,13 +15,32 @@ class View(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     my_user = db.relationship('User', back_populates='my_views')
 
-    def process(self):
+    def __init__(
+            self,
+            url: str,
+            user_agent: str,
+            timestamp: datetime,
+    ):
+        self.url = url
+        self.user_agent = user_agent
+        self.timestamp = timestamp
+
         agent = user_agents.parse(self.user_agent)
         self.operating_system = agent.os.family + ' ' + agent.os.version_string  #user_agent.determine_os(self.user_agent)
         self.browser = agent.browser.family + ' ' + agent.browser.version_string  #user_agent.determine_browser(self.user_agent)
 
     def is_bot(self) -> bool:
-        return user_agent.is_bot(self.user_agent)
+        agent = user_agents.parse(self.user_agent)
+        if agent.is_bot:
+            return True
+        elif 'bot' in self.user_agent.lower():
+            return True
+        elif 'scan' in self.user_agent.lower():
+            return True
+        elif 'request' in self.user_agent.lower():
+            return True
+        else:
+            return False
 
     def __repr__(self):
         return 'View(user_id="{}", url="{}", timestamp={}, agent="{}")'.format(

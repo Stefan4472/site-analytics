@@ -37,9 +37,7 @@ def store_traffic(contract: ReportTrafficContract):
 
     # Add to database. SQL-Alchemy will escape strings before processing them.
     user = get_or_create_user(contract.ip_address)
-    # TODO: replace `process()` with constructor
-    view = View(url=contract.url, user_agent=contract.user_agent, timestamp=contract.timestamp)
-    view.process()
+    view = View(contract.url, contract.user_agent, contract.timestamp)
     db.session.add(user)
     db.session.add(view)
     user.my_views.append(view)

@@ -59,10 +59,11 @@ def process_data():
     current_app.logger.info('Running data processing')
     for user in User.query.filter_by(was_processed=False):
         try:
+            current_app.logger.info(f'Processing User {user.id}')
             user.process()
             db.session.commit()  # TODO: move this out of the loop once we're sure it doesn't fail
         except ValueError as e:
-            current_app.logger.error(f'Failure processing user {user.id}: {e.args}')
+            current_app.logger.error(f'Failure processing user {user.id}: {e}')
         # Sleep to avoid exceeding the Geo-IP API rate limit
         time.sleep(1)
 

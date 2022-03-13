@@ -20,7 +20,7 @@ BOT_KEYWORDS = [
 ]
 
 
-def hostname_from_ip(ip_address: str) -> str:
+def lookup_hostname(ip_address: str) -> str:
     try:
         hostname = socket.gethostbyaddr(ip_address)[0]
     except (socket.herror, socket.gaierror):

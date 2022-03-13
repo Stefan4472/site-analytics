@@ -17,11 +17,11 @@ LOCATION_API_HEADERS = {
 }
 
 
-def request_location_info(ip_addr: str) -> Location:
+def lookup_location(ip_addr: str) -> Location:
     """Query the FreeGeoIP API."""
     response = requests.request(
         'GET',
-        LOCATION_API_URL + ip_addr,
+        LOCATION_API_URL+ip_addr,
         headers=LOCATION_API_HEADERS,
     )
     if response.status_code == 200:
