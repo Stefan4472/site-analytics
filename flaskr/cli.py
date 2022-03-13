@@ -1,10 +1,13 @@
 import click
 import pathlib
-import sqlalchemy
+import time
+from datetime import datetime
 from flask import current_app
 from flask.cli import with_appcontext
 from flaskr.database import db
 import flaskr.api.traffic_api as traffic_api
+from flaskr.contracts.report_traffic import ReportTrafficContract
+from flaskr.models.user import User
 """Flask CLI commands."""
 
 
@@ -33,15 +36,38 @@ def reset_db_command():
 @with_appcontext
 def run_import_command(logfile: pathlib.Path):
     """For temporary development usage only!"""
-    traffic_api.run_import(logfile)
+    current_app.logger.info(f'Running import on logfile {logfile.absolute()}')
+    with open(logfile) as f:
+        for line in f:
+            first_comma = line.index(',')
+            second_comma = line.index(',', first_comma+1)
+            third_comma = line.index(',', second_comma+1)
+
+            timestamp = line[:first_comma]
+            request_time = datetime.strptime(timestamp, '%m-%d-%Y-%H:%M:%S:%f')
+            url = line[first_comma+1:second_comma]
+            ip = line[second_comma+1:third_comma]
+            user_agent = line[third_comma+1:]
+
+            contract = ReportTrafficContract(url, ip, user_agent, request_time)
+            traffic_api.store_traffic(contract)
 
 
 @click.command('process-data')
 @with_appcontext
 def process_data():
-    traffic_api.process_data()
+    current_app.logger.info('Running data processing')
+    for user in User.query.filter_by(was_processed=False):
+        try:
+            user.process()
+            db.session.commit()  # TODO: move this out of the loop once we're sure it doesn't fail
+        except ValueError as e:
+            current_app.logger.error(f'Failure processing user {user.id}: {e.args}')
+        # Sleep to avoid exceeding the Geo-IP API rate limit
+        time.sleep(1)
 
 
+# TODO: remove
 @click.command('debug-noodling')
 @with_appcontext
 def debug_noodling():

@@ -31,17 +31,17 @@ class GroupWhat(Enum):
         if self == GroupWhat.Nothing:
             return None
         elif self == GroupWhat.Country:
-            return '_user.country'
+            return 'users.country'
         elif self == GroupWhat.City:
-            return '_user.city'
+            return 'users.city'
         elif self == GroupWhat.Region:
-            return '_user.region'
+            return 'users.region'
         elif self == GroupWhat.Url:
-            return 'view.url'
+            return 'views.url'
         elif self == GroupWhat.Domain:
-            return '_user.domain'
+            return 'users.domain'
         elif self == GroupWhat.OperatingSystem:
-            return 'view.operating_system'
+            return 'views.operating_system'
         else:
             raise ValueError('Not implemented')
 
@@ -105,7 +105,7 @@ class QueryRunner:
         GROUP BY section.
         """
         if query.count_what == CountWhat.Users:
-            query_string = 'SELECT COUNT(DISTINCT _user.id) AS cnt'
+            query_string = 'SELECT COUNT(DISTINCT users.id) AS cnt'
         else:
             query_string = 'SELECT COUNT(*) AS cnt'
 
@@ -115,18 +115,18 @@ class QueryRunner:
 
         # Select date values for "QueryResolution" (if resolution != AllTime)
         if query.resolution == QueryResolution.Day:
-            query_string += ', EXTRACT(YEAR FROM view.timestamp) AS year, EXTRACT(DOY FROM view.timestamp) AS day'
+            query_string += ', EXTRACT(YEAR FROM views.timestamp) AS year, EXTRACT(DOY FROM views.timestamp) AS day'
         elif query.resolution == QueryResolution.Week:
-            query_string += ', EXTRACT(YEAR FROM view.timestamp) AS year, EXTRACT(WEEK FROM view.timestamp) AS week'
+            query_string += ', EXTRACT(YEAR FROM views.timestamp) AS year, EXTRACT(WEEK FROM views.timestamp) AS week'
         elif query.resolution == QueryResolution.Month:
-            query_string += ', EXTRACT(YEAR FROM view.timestamp) AS year, EXTRACT(MONTH FROM view.timestamp) AS month'
+            query_string += ', EXTRACT(YEAR FROM views.timestamp) AS year, EXTRACT(MONTH FROM views.timestamp) AS month'
         elif query.resolution == QueryResolution.Year:
-            query_string += ', EXTRACT(YEAR FROM view.timestamp) AS year'
+            query_string += ', EXTRACT(YEAR FROM views.timestamp) AS year'
 
         query_string += \
-            ' FROM _user JOIN view ON view.user_id = _user.id ' \
-            'WHERE view.timestamp > :start AND view.timestamp < :end ' \
-            'AND _user.is_bot = :is_bot'
+            ' FROM users JOIN views ON views.user_id = users.id ' \
+            'WHERE views.timestamp > :start AND views.timestamp < :end ' \
+            'AND users.is_bot = :is_bot'
 
         # Assemble GROUP BY (unless resolution == AllTime and QueryWhat == Nothing)
         if not (query.resolution == QueryResolution.AllTime and query.group_what == GroupWhat.Nothing):

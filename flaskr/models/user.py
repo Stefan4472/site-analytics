@@ -4,9 +4,8 @@ from flaskr.processing.hostname import hostname_from_ip, domain_from_hostname, i
 from flaskr.processing.location import request_location_info
 
 
-# TODO: think of a better name. Also because `user` is a reserved keyword in Postgres
 class User(db.Model):
-    __tablename__ = '_user'
+    __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     # uuid = db.Column(db.String, server_default=lambda: str(uuid.uuid4()), unique=True, primary_key=True)
     ip_address = db.Column(db.String, nullable=False, unique=True, index=True)
@@ -17,8 +16,9 @@ class User(db.Model):
     country = db.Column(db.String)
     is_bot = db.Column(db.Boolean)
     was_processed = db.Column(db.Boolean, server_default='0')
-    # Associated Views
-    views = db.relationship('View', back_populates='_user')
+    # Associated Views.
+    # Named "my_views" to distinguish from the "views" DB table
+    my_views = db.relationship('View', back_populates='my_user')
 
     def process(self):
         """

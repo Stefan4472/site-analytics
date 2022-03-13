@@ -11,10 +11,10 @@ the main query types.
 def test_count_users_all_time():
     query = Query(QueryOn.People, CountWhat.Users, GroupWhat.Nothing, QueryResolution.AllTime)
     expected_sql = \
-        'SELECT COUNT(DISTINCT _user.id) AS cnt '\
-        'FROM _user JOIN view ON view.user_id = _user.id '\
-        'WHERE view.timestamp > :start AND view.timestamp < :end '\
-        'AND _user.is_bot = :is_bot ' \
+        'SELECT COUNT(DISTINCT users.id) AS cnt '\
+        'FROM users JOIN views ON views.user_id = users.id '\
+        'WHERE views.timestamp > :start AND views.timestamp < :end '\
+        'AND users.is_bot = :is_bot ' \
         'ORDER BY cnt'
     assert expected_sql == QueryRunner._generate_sql(query)
 
@@ -22,12 +22,12 @@ def test_count_users_all_time():
 def test_count_users_by_day():
     query = Query(QueryOn.People, CountWhat.Users, GroupWhat.Nothing, QueryResolution.Day)
     expected_sql = \
-        'SELECT COUNT(DISTINCT _user.id) AS cnt, ' \
-        'EXTRACT(YEAR FROM view.timestamp) AS year, ' \
-        'EXTRACT(DOY FROM view.timestamp) AS day '\
-        'FROM _user JOIN view ON view.user_id = _user.id '\
-        'WHERE view.timestamp > :start AND view.timestamp < :end '\
-        'AND _user.is_bot = :is_bot '\
+        'SELECT COUNT(DISTINCT users.id) AS cnt, ' \
+        'EXTRACT(YEAR FROM views.timestamp) AS year, ' \
+        'EXTRACT(DOY FROM views.timestamp) AS day '\
+        'FROM users JOIN views ON views.user_id = users.id '\
+        'WHERE views.timestamp > :start AND views.timestamp < :end '\
+        'AND users.is_bot = :is_bot '\
         'GROUP BY year, day ORDER BY year, day, cnt'
     assert expected_sql == QueryRunner._generate_sql(query)
 
@@ -35,12 +35,12 @@ def test_count_users_by_day():
 def test_count_users_by_week():
     query = Query(QueryOn.People, CountWhat.Users, GroupWhat.Nothing, QueryResolution.Week)
     expected_sql = \
-        'SELECT COUNT(DISTINCT _user.id) AS cnt, ' \
-        'EXTRACT(YEAR FROM view.timestamp) AS year, ' \
-        'EXTRACT(WEEK FROM view.timestamp) AS week '\
-        'FROM _user JOIN view ON view.user_id = _user.id '\
-        'WHERE view.timestamp > :start AND view.timestamp < :end '\
-        'AND _user.is_bot = :is_bot ' \
+        'SELECT COUNT(DISTINCT users.id) AS cnt, ' \
+        'EXTRACT(YEAR FROM views.timestamp) AS year, ' \
+        'EXTRACT(WEEK FROM views.timestamp) AS week '\
+        'FROM users JOIN views ON views.user_id = users.id '\
+        'WHERE views.timestamp > :start AND views.timestamp < :end '\
+        'AND users.is_bot = :is_bot ' \
         'GROUP BY year, week ORDER BY year, week, cnt'
     assert expected_sql == QueryRunner._generate_sql(query)
 
@@ -48,12 +48,12 @@ def test_count_users_by_week():
 def test_count_users_by_month():
     query = Query(QueryOn.People, CountWhat.Users, GroupWhat.Nothing, QueryResolution.Month)
     expected_sql = \
-        'SELECT COUNT(DISTINCT _user.id) AS cnt, ' \
-        'EXTRACT(YEAR FROM view.timestamp) AS year, ' \
-        'EXTRACT(MONTH FROM view.timestamp) AS month '\
-        'FROM _user JOIN view ON view.user_id = _user.id '\
-        'WHERE view.timestamp > :start AND view.timestamp < :end '\
-        'AND _user.is_bot = :is_bot ' \
+        'SELECT COUNT(DISTINCT users.id) AS cnt, ' \
+        'EXTRACT(YEAR FROM views.timestamp) AS year, ' \
+        'EXTRACT(MONTH FROM views.timestamp) AS month '\
+        'FROM users JOIN views ON views.user_id = users.id '\
+        'WHERE views.timestamp > :start AND views.timestamp < :end '\
+        'AND users.is_bot = :is_bot ' \
         'GROUP BY year, month ORDER BY year, month, cnt'
     assert expected_sql == QueryRunner._generate_sql(query)
 
@@ -61,11 +61,11 @@ def test_count_users_by_month():
 def test_count_users_by_year():
     query = Query(QueryOn.People, CountWhat.Users, GroupWhat.Nothing, QueryResolution.Year)
     expected_sql = \
-        'SELECT COUNT(DISTINCT _user.id) AS cnt, ' \
-        'EXTRACT(YEAR FROM view.timestamp) AS year ' \
-        'FROM _user JOIN view ON view.user_id = _user.id '\
-        'WHERE view.timestamp > :start AND view.timestamp < :end '\
-        'AND _user.is_bot = :is_bot '\
+        'SELECT COUNT(DISTINCT users.id) AS cnt, ' \
+        'EXTRACT(YEAR FROM views.timestamp) AS year ' \
+        'FROM users JOIN views ON views.user_id = users.id '\
+        'WHERE views.timestamp > :start AND views.timestamp < :end '\
+        'AND users.is_bot = :is_bot '\
         'GROUP BY year ORDER BY year, cnt'
     assert expected_sql == QueryRunner._generate_sql(query)
 
@@ -73,61 +73,61 @@ def test_count_users_by_year():
 def test_country_views_all_time():
     query = Query(QueryOn.Bots, CountWhat.Views, GroupWhat.Country, QueryResolution.AllTime)
     expected_sql = \
-        'SELECT COUNT(*) AS cnt, _user.country '\
-        'FROM _user JOIN view ON view.user_id = _user.id '\
-        'WHERE view.timestamp > :start AND view.timestamp < :end '\
-        'AND _user.is_bot = :is_bot ' \
-        'GROUP BY _user.country ' \
-        'ORDER BY _user.country'
+        'SELECT COUNT(*) AS cnt, users.country '\
+        'FROM users JOIN views ON views.user_id = users.id '\
+        'WHERE views.timestamp > :start AND views.timestamp < :end '\
+        'AND users.is_bot = :is_bot ' \
+        'GROUP BY users.country ' \
+        'ORDER BY users.country'
     assert expected_sql == QueryRunner._generate_sql(query)
 
 
 def test_country_views_by_day():
     query = Query(QueryOn.Bots, CountWhat.Views, GroupWhat.Country, QueryResolution.Day)
     expected_sql = \
-        'SELECT COUNT(*) AS cnt, _user.country, ' \
-        'EXTRACT(YEAR FROM view.timestamp) AS year, ' \
-        'EXTRACT(DOY FROM view.timestamp) AS day '\
-        'FROM _user JOIN view ON view.user_id = _user.id '\
-        'WHERE view.timestamp > :start AND view.timestamp < :end '\
-        'AND _user.is_bot = :is_bot '\
-        'GROUP BY year, day, _user.country ORDER BY year, day, _user.country'
+        'SELECT COUNT(*) AS cnt, users.country, ' \
+        'EXTRACT(YEAR FROM views.timestamp) AS year, ' \
+        'EXTRACT(DOY FROM views.timestamp) AS day '\
+        'FROM users JOIN views ON views.user_id = users.id '\
+        'WHERE views.timestamp > :start AND views.timestamp < :end '\
+        'AND users.is_bot = :is_bot '\
+        'GROUP BY year, day, users.country ORDER BY year, day, users.country'
     assert expected_sql == QueryRunner._generate_sql(query)
 
 
 def test_country_views_by_week():
     query = Query(QueryOn.Bots, CountWhat.Views, GroupWhat.Country, QueryResolution.Week)
     expected_sql = \
-        'SELECT COUNT(*) AS cnt, _user.country, ' \
-        'EXTRACT(YEAR FROM view.timestamp) AS year, ' \
-        'EXTRACT(WEEK FROM view.timestamp) AS week '\
-        'FROM _user JOIN view ON view.user_id = _user.id '\
-        'WHERE view.timestamp > :start AND view.timestamp < :end '\
-        'AND _user.is_bot = :is_bot ' \
-        'GROUP BY year, week, _user.country ORDER BY year, week, _user.country'
+        'SELECT COUNT(*) AS cnt, users.country, ' \
+        'EXTRACT(YEAR FROM views.timestamp) AS year, ' \
+        'EXTRACT(WEEK FROM views.timestamp) AS week '\
+        'FROM users JOIN views ON views.user_id = users.id '\
+        'WHERE views.timestamp > :start AND views.timestamp < :end '\
+        'AND users.is_bot = :is_bot ' \
+        'GROUP BY year, week, users.country ORDER BY year, week, users.country'
     assert expected_sql == QueryRunner._generate_sql(query)
 
 
 def test_country_views_by_month():
     query = Query(QueryOn.Bots, CountWhat.Views, GroupWhat.Country, QueryResolution.Month)
     expected_sql = \
-        'SELECT COUNT(*) AS cnt, _user.country, ' \
-        'EXTRACT(YEAR FROM view.timestamp) AS year, ' \
-        'EXTRACT(MONTH FROM view.timestamp) AS month '\
-        'FROM _user JOIN view ON view.user_id = _user.id '\
-        'WHERE view.timestamp > :start AND view.timestamp < :end '\
-        'AND _user.is_bot = :is_bot ' \
-        'GROUP BY year, month, _user.country ORDER BY year, month, _user.country'
+        'SELECT COUNT(*) AS cnt, users.country, ' \
+        'EXTRACT(YEAR FROM views.timestamp) AS year, ' \
+        'EXTRACT(MONTH FROM views.timestamp) AS month '\
+        'FROM users JOIN views ON views.user_id = users.id '\
+        'WHERE views.timestamp > :start AND views.timestamp < :end '\
+        'AND users.is_bot = :is_bot ' \
+        'GROUP BY year, month, users.country ORDER BY year, month, users.country'
     assert expected_sql == QueryRunner._generate_sql(query)
 
 
 def test_country_views_by_year():
     query = Query(QueryOn.Bots, CountWhat.Views, GroupWhat.Country, QueryResolution.Year)
     expected_sql = \
-        'SELECT COUNT(*) AS cnt, _user.country, ' \
-        'EXTRACT(YEAR FROM view.timestamp) AS year ' \
-        'FROM _user JOIN view ON view.user_id = _user.id '\
-        'WHERE view.timestamp > :start AND view.timestamp < :end '\
-        'AND _user.is_bot = :is_bot '\
-        'GROUP BY year, _user.country ORDER BY year, _user.country'
+        'SELECT COUNT(*) AS cnt, users.country, ' \
+        'EXTRACT(YEAR FROM views.timestamp) AS year ' \
+        'FROM users JOIN views ON views.user_id = users.id '\
+        'WHERE views.timestamp > :start AND views.timestamp < :end '\
+        'AND users.is_bot = :is_bot '\
+        'GROUP BY year, users.country ORDER BY year, users.country'
     assert expected_sql == QueryRunner._generate_sql(query)
