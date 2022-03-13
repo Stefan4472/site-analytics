@@ -52,10 +52,13 @@ def test_traffic(client):
 
 
 def test_users(client):
-    res = client.get('/api/v1/data/users', query_string={
-        'start_date': '2020-04-01',
-        'end_date': '2020-05-01',
-        'classification': 'BOT',
+    res = client.get('/api/v1/data/statistics', query_string={
+        'query_on': 'Bots',
+        'count_what': 'Views',
+        'group_what': 'Country',
+        'resolution': 'Week',
+        'start_date': '2020-4-1',
+        'end_date': '2022-5-1',
     }, headers={'Authorization': PYTEST_SECRET_KEY})
     assert res.status == '200 OK'
     assert res.data == b'[]\n'
