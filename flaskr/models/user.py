@@ -8,7 +8,6 @@ from flaskr.processing.location import request_location_info
 class User(db.Model):
     __tablename__ = '_user'
     id = db.Column(db.Integer, primary_key=True)
-    # TODO: USE UUID ONCE SWITCHED OVER TO POSTGRES
     # uuid = db.Column(db.String, server_default=lambda: str(uuid.uuid4()), unique=True, primary_key=True)
     ip_address = db.Column(db.String, nullable=False, unique=True, index=True)
     hostname = db.Column(db.String)

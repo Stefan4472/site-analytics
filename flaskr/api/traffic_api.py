@@ -25,7 +25,6 @@ corresponding users
 '''
 
 
-# Create blueprint, which will be used to register URL routes
 blueprint = Blueprint('traffic', __name__, url_prefix='/api/v1/traffic')
 
 

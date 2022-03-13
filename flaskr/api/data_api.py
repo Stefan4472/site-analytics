@@ -6,11 +6,10 @@ from flaskr.contracts.data_request import DataRequestContract
 # TODO: SETUP AUTO-SWAGGER DOCUMENTATION USING MARSHMALLOW DEFINITIONS
 
 
-# Create blueprint, which will be used to register URL routes
 blueprint = Blueprint('data', __name__, url_prefix='/api/v1/data')
 
 
-@blueprint.route('/users')
+@blueprint.route('/statistics')
 @login_required
 def get_users():
     """Query on number of unique users."""

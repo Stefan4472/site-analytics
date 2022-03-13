@@ -46,21 +46,18 @@ def process_data():
 @with_appcontext
 def debug_noodling():
     import datetime as dt
-    import flaskr.processing.queries as queries
-    from flaskr.contracts.data_request import UserBotClassification
-    from flaskr.processing.queries import QueryResolution, QueryWhat
+    from flaskr.processing.query_runner import QueryRunner, Query, QueryOn, CountWhat, GroupWhat, QueryResolution, QueryResult
     start = dt.datetime(2020, 4, 1)
     end = dt.datetime(2022, 5, 1)
-    classification = UserBotClassification.BOT
 
-    print(queries.query_users(QueryWhat.Country, classification, start, end, QueryResolution.AllTime))
-    print(queries.query_users(QueryWhat.Country, classification, start, end, QueryResolution.Day))
-    print(queries.query_users(QueryWhat.Country, classification, start, end, QueryResolution.Week))
-    print(queries.query_users(QueryWhat.Country, classification, start, end, QueryResolution.Month))
-    print(queries.query_users(QueryWhat.Country, classification, start, end, QueryResolution.Year))
+    print(QueryRunner.run_query(Query(QueryOn.Bots, CountWhat.Users, GroupWhat.Country, QueryResolution.AllTime, start, end), db.session))
+    print(QueryRunner.run_query(Query(QueryOn.Bots, CountWhat.Users, GroupWhat.Country, QueryResolution.Day, start, end), db.session))
+    print(QueryRunner.run_query(Query(QueryOn.Bots, CountWhat.Users, GroupWhat.Country, QueryResolution.Week, start, end), db.session))
+    print(QueryRunner.run_query(Query(QueryOn.Bots, CountWhat.Users, GroupWhat.Country, QueryResolution.Month, start, end), db.session))
+    print(QueryRunner.run_query(Query(QueryOn.Bots, CountWhat.Users, GroupWhat.Country, QueryResolution.Year, start, end), db.session))
 
-    print(queries.query_views(QueryWhat.Country, classification, start, end, QueryResolution.AllTime))
-    print(queries.query_views(QueryWhat.Country, classification, start, end, QueryResolution.Day))
-    print(queries.query_views(QueryWhat.Country, classification, start, end, QueryResolution.Week))
-    print(queries.query_views(QueryWhat.Country, classification, start, end, QueryResolution.Month))
-    print(queries.query_views(QueryWhat.Country, classification, start, end, QueryResolution.Year))
+    print(QueryRunner.run_query(Query(QueryOn.Bots, CountWhat.Views, GroupWhat.Country, QueryResolution.Day, start, end), db.session))
+    print(QueryRunner.run_query(Query(QueryOn.Bots, CountWhat.Views, GroupWhat.Country, QueryResolution.Week, start, end), db.session))
+    print(QueryRunner.run_query(Query(QueryOn.Bots, CountWhat.Views, GroupWhat.Country, QueryResolution.Month, start, end), db.session))
+    print(QueryRunner.run_query(Query(QueryOn.Bots, CountWhat.Views, GroupWhat.Country, QueryResolution.Year, start, end), db.session))
+    print(QueryRunner.run_query(Query(QueryOn.Bots, CountWhat.Views, GroupWhat.Country, QueryResolution.AllTime, start, end), db.session))
