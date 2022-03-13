@@ -32,15 +32,14 @@ blueprint = Blueprint('traffic', __name__, url_prefix='/api/v1/traffic')
 @login_required
 def report_traffic():
     try:
-        contract: ReportTrafficContract = ReportTrafficContract.get_schema().load(request.json)
+        contract = ReportTrafficContract.load(request.json)
     except marshmallow.exceptions.ValidationError as e:
         return Response(status=400, response='Invalid parameters: {}'.format(e))
 
-    request_time = datetime.datetime.now()
     # Write to log file
     with open(current_app.config['LOG_PATH'], 'a') as log_file:
         log_file.write('{},{},{},{}\n'.format(
-            request_time,
+            contract.timestamp,
             contract.url,
             contract.ip_address,
             contract.user_agent,
@@ -48,7 +47,7 @@ def report_traffic():
 
     # Add to database. SQL-Alchemy will escape strings before processing them.
     user = get_or_create_user(contract.ip_address)
-    view = View(url=contract.url, user_agent=contract.user_agent, timestamp=request_time)
+    view = View(url=contract.url, user_agent=contract.user_agent, timestamp=contract.timestamp)
     view.process()
     db.session.add(user)
     db.session.add(view)
