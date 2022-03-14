@@ -89,7 +89,7 @@ COUNTRY_CODE_MAPPING = {
     'Central African Republic': 'cf',
     'Congo': 'cg',
     'Switzerland': 'ch',
-    'Cote d’Ivoire': 'ci',
+    'Ivory Coast': 'ci',
     'Chile': 'cl',
     'Cameroon': 'cm',
     'China': 'cn',
@@ -235,7 +235,7 @@ COUNTRY_CODE_MAPPING = {
     'Uruguay': 'uy',
     'Uzbekistan': 'uz',
     'Holy See (Vatican City State)': 'va',
-    'Venezuela, Bolivarian Republic of': 've',
+    'Venezuela': 've',
     'Vietnam': 'vn',
     'Yemen': 'ye',
     'Mayotte': 'yt',
@@ -343,11 +343,119 @@ def plot_all_time_person_os(filename: str, auth_key: str):
     fig.savefig(filename)
 
 
+def plot_all_time_person_devices(filename: str, auth_key: str):
+    """Devices by number of person-users, all time."""
+    params = {
+        'query_on': 'People',
+        'count_what': 'Users',
+        'group_what': 'Device',
+        'resolution': 'AllTime',
+        'start_date': '2020-4-1',
+        'end_date': '2022-5-1',
+    }
+    people_devices_all_time = make_request(params, auth_key)
+    # Standardize keys
+    binned_devices_all_time = {
+        'Huawei': 0, 'Apple': 0, 'XiaoMi': 0, 'Samsung': 0, 'Google': 0,
+        'Other Android': 0, 'Other': 0, 'Unknown': 0}
+    for data in people_devices_all_time:
+        if 'Huawei' in data['key']:
+            binned_devices_all_time['Huawei'] += data['quantity']
+        elif 'Apple' in data['key']:
+            binned_devices_all_time['Apple'] += data['quantity']
+        elif 'XiaoMi' in data['key']:
+            binned_devices_all_time['XiaoMi'] += data['quantity']
+        elif 'Samsung' in data['key']:
+            binned_devices_all_time['Samsung'] += data['quantity']
+        elif 'Android' in data['key']:
+            binned_devices_all_time['Other Android'] += data['quantity']
+        elif 'Google' in data['key']:
+            binned_devices_all_time['Google'] += data['quantity']
+        elif data['key'] == '' or 'Generic' in data['key']:
+            binned_devices_all_time['Unknown'] += data['quantity']
+        else:
+            binned_devices_all_time['Other'] += data['quantity']
+
+    fig, ax = plt.subplots()
+    fig.suptitle('Person Device Manufacturers')
+    ax.pie(binned_devices_all_time.values(), labels=binned_devices_all_time.keys())
+    ax.legend()
+    fig.savefig(filename)
+
+
+def plot_all_time_device_types(filename: str, auth_key: str):
+    """Devices by number of person-users, all time."""
+    params = {
+        'query_on': 'People',
+        'count_what': 'Users',
+        'group_what': 'DeviceType',
+        'resolution': 'AllTime',
+        'start_date': '2020-4-1',
+        'end_date': '2022-5-1',
+    }
+    people_devices_all_time = make_request(params, auth_key)
+    values = [d['quantity'] for d in people_devices_all_time]
+    labels = [d['key'] for d in people_devices_all_time]
+    labels[labels.index('')] = 'Unknown'
+    fig, ax = plt.subplots()
+    fig.suptitle('Device Types')
+    ax.pie(values, labels=labels)
+    fig.savefig(filename)
+
+
+def plot_all_time_person_browsers(filename: str, auth_key: str):
+    """Browser by number of person-users, all time."""
+    params = {
+        'query_on': 'People',
+        'count_what': 'Users',
+        'group_what': 'Browser',
+        'resolution': 'AllTime',
+        'start_date': '2020-4-1',
+        'end_date': '2022-5-1',
+    }
+    people_browsers_all_time = make_request(params, auth_key)
+    # Standardize keys
+    binned_browsers_all_time = {
+        'Chrome': 0, 'Edge': 0, 'Firefox': 0, 'Safari': 0, 'Opera': 0, 'IE': 0, 'Http-Client': 0, 'Other': 0, 'Unknown': 0}
+    for data in people_browsers_all_time:
+        if 'Chrome' in data['key']:
+            binned_browsers_all_time['Chrome'] += data['quantity']
+        elif 'Edge' in data['key']:
+            binned_browsers_all_time['Edge'] += data['quantity']
+        elif 'Firefox' in data['key']:
+            binned_browsers_all_time['Firefox'] += data['quantity']
+        elif 'Safari' in data['key']:
+            binned_browsers_all_time['Safari'] += data['quantity']
+        elif 'Opera' in data['key']:
+            binned_browsers_all_time['Opera'] += data['quantity']
+        elif 'IE' in data['key']:
+            binned_browsers_all_time['IE'] += data['quantity']
+        elif 'Other' in data['key']:
+            binned_browsers_all_time['Unknown'] += data['quantity']
+        elif 'Http' in data['key'] or 'http' in data['key']:
+            binned_browsers_all_time['Http-Client'] += data['quantity']
+        else:
+            binned_browsers_all_time['Other'] += data['quantity']
+    print(binned_browsers_all_time)
+    as_tuples = [(k, v) for k, v in binned_browsers_all_time.items()]
+    as_tuples.sort(key=lambda x: x[1], reverse=True)
+    labels = [t[0] for t in as_tuples]
+    vals = [t[1] for t in as_tuples]
+    print(labels)
+    fig, ax = plt.subplots()
+    fig.suptitle('Person Browsers')
+    ax.pie(vals, labels=labels)
+    fig.savefig(filename)
+
+
 if __name__ == '__main__':
     AUTH_KEY = 'dev'
 
-    plot_views_per_week('views-per-week.jpg', AUTH_KEY)
-    plot_views_per_country('views-by-country.jpg', AUTH_KEY)
-    get_all_time_urls(AUTH_KEY)
-    get_all_time_bot_domains(AUTH_KEY)
-    plot_all_time_person_os('operating-systems.jpg', AUTH_KEY)
+    # plot_views_per_week('views-per-week.jpg', AUTH_KEY)
+    # plot_views_per_country('views-by-country.jpg', AUTH_KEY)
+    # get_all_time_urls(AUTH_KEY)
+    # get_all_time_bot_domains(AUTH_KEY)
+    # plot_all_time_person_os('operating-systems.jpg', AUTH_KEY)
+    # plot_all_time_person_devices('manufacturers.jpg', AUTH_KEY)
+    # plot_all_time_device_types('devices.jpg', AUTH_KEY)
+    plot_all_time_person_browsers('browsers.jpg', AUTH_KEY)
