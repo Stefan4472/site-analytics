@@ -25,7 +25,9 @@ class GroupWhat(Enum):
     Url = 'Url'
     Domain = 'Domain'
     OperatingSystem = 'OperatingSystem'
-    # TODO: remaining user-agent infos
+    Device = 'Device'
+    DeviceType = 'DeviceType'
+    Browser = 'Browser'
 
     def get_column_name(self) -> Optional[str]:
         if self == GroupWhat.Nothing:
@@ -42,6 +44,12 @@ class GroupWhat(Enum):
             return 'users.domain'
         elif self == GroupWhat.OperatingSystem:
             return 'views.operating_system'
+        elif self == GroupWhat.Device:
+            return 'views.device'
+        elif self == GroupWhat.DeviceType:
+            return 'views.device_type'
+        elif self == GroupWhat.Browser:
+            return 'views.browser'
         else:
             raise ValueError('Not implemented')
 
