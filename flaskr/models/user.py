@@ -52,10 +52,13 @@ class User(db.Model):
     def _check_is_bot(self) -> bool:
         """Decides whether this User is a bot. Call after determining hostname."""
         if any(v.is_bot() for v in self.my_views):
+            print('A view is a bot')
             return True
         elif is_bot(self.hostname):
+            print('hostname is a bot')
             return True
         elif self._calc_requests_per_second() >= 1:
+            print('RPS over 1')
             return True
         else:
             return False

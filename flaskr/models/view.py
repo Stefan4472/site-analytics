@@ -11,6 +11,8 @@ class View(db.Model):
     timestamp = db.Column(db.DateTime, nullable=False)
     operating_system = db.Column(db.String)
     browser = db.Column(db.String)
+    device = db.Column(db.String)
+    device_type = db.Column(db.String)
     # Associated User
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     my_user = db.relationship('User', back_populates='my_views')
@@ -26,8 +28,12 @@ class View(db.Model):
         self.timestamp = timestamp
 
         agent = user_agents.parse(self.user_agent)
-        self.operating_system = agent.os.family + ' ' + agent.os.version_string  #user_agent.determine_os(self.user_agent)
-        self.browser = agent.browser.family + ' ' + agent.browser.version_string  #user_agent.determine_browser(self.user_agent)
+        self.operating_system = agent.os.family + ' ' + agent.os.version_string
+        self.browser = agent.browser.family + ' ' + agent.browser.version_string
+        self.device = agent.device.family + ' ' + \
+            agent.device.brand if agent.device.brand else ''
+        self.device_type = 'Mobile' if agent.is_mobile else 'Tablet' if \
+            agent.is_tablet else 'PC' if agent.is_pc else ''
 
     def is_bot(self) -> bool:
         agent = user_agents.parse(self.user_agent)
