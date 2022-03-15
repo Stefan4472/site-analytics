@@ -9,7 +9,7 @@ the main query types.
 
 
 def test_count_users_all_time():
-    query = Query(QueryOn.People, CountWhat.Users, GroupWhat.Nothing, QueryResolution.AllTime)
+    query = Query(QueryOn.People, CountWhat.Users, GroupWhat.Nothing, QueryResolution.All)
     expected_sql = \
         'SELECT COUNT(DISTINCT users.id) AS cnt '\
         'FROM users JOIN views ON views.user_id = users.id '\
@@ -71,7 +71,7 @@ def test_count_users_by_year():
 
 
 def test_country_views_all_time():
-    query = Query(QueryOn.Bots, CountWhat.Views, GroupWhat.Country, QueryResolution.AllTime)
+    query = Query(QueryOn.Bots, CountWhat.Views, GroupWhat.Country, QueryResolution.All)
     expected_sql = \
         'SELECT COUNT(*) AS cnt, users.country '\
         'FROM users JOIN views ON views.user_id = users.id '\

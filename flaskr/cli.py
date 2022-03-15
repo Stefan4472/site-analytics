@@ -77,7 +77,7 @@ def debug_noodling():
     start = dt.datetime(2020, 4, 1)
     end = dt.datetime(2022, 5, 1)
 
-    print(QueryRunner.run_query(Query(QueryOn.Bots, CountWhat.Users, GroupWhat.Country, QueryResolution.AllTime, start, end), db.session))
+    print(QueryRunner.run_query(Query(QueryOn.Bots, CountWhat.Users, GroupWhat.Country, QueryResolution.All, start, end), db.session))
     print(QueryRunner.run_query(Query(QueryOn.Bots, CountWhat.Users, GroupWhat.Country, QueryResolution.Day, start, end), db.session))
     print(QueryRunner.run_query(Query(QueryOn.Bots, CountWhat.Users, GroupWhat.Country, QueryResolution.Week, start, end), db.session))
     print(QueryRunner.run_query(Query(QueryOn.Bots, CountWhat.Users, GroupWhat.Country, QueryResolution.Month, start, end), db.session))
@@ -87,4 +87,4 @@ def debug_noodling():
     print(QueryRunner.run_query(Query(QueryOn.Bots, CountWhat.Views, GroupWhat.Country, QueryResolution.Week, start, end), db.session))
     print(QueryRunner.run_query(Query(QueryOn.Bots, CountWhat.Views, GroupWhat.Country, QueryResolution.Month, start, end), db.session))
     print(QueryRunner.run_query(Query(QueryOn.Bots, CountWhat.Views, GroupWhat.Country, QueryResolution.Year, start, end), db.session))
-    print(QueryRunner.run_query(Query(QueryOn.Bots, CountWhat.Views, GroupWhat.Country, QueryResolution.AllTime, start, end), db.session))
+    print(QueryRunner.run_query(Query(QueryOn.Bots, CountWhat.Views, GroupWhat.Country, QueryResolution.All, start, end), db.session))

@@ -13,8 +13,8 @@ class DataRequestContract:
     count_what: CountWhat
     group_what: GroupWhat
     resolution: QueryResolution
-    start_date: dt.date
-    end_date: dt.date
+    start_date: dt.date = None
+    end_date: dt.date = None
 
     class Meta:
         # Define date format
@@ -36,12 +36,13 @@ class DataRequestContract:
 
 
 class DataRequestSchema(msh.Schema):
+    # TODO: need to parse dates as UTC-timezones, because Psycopg automatically interprets as UTC
     query_on = msh_enum.EnumField(QueryOn, required=True, allow_none=False)
     count_what = msh_enum.EnumField(CountWhat, required=True, allow_none=False)
     group_what = msh_enum.EnumField(GroupWhat, required=True, allow_none=False)
     resolution = msh_enum.EnumField(QueryResolution, required=True, allow_none=False)
-    start_date = msh.fields.Date()
-    end_date = msh.fields.Date()
+    start_date = msh.fields.Date(required=False, allow_none=True)
+    end_date = msh.fields.Date(required=False, allow_none=True)
 
     @msh.post_load
     def make_contract(self, data, **kwargs) -> DataRequestContract:

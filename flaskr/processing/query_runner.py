@@ -55,7 +55,7 @@ class GroupWhat(Enum):
 
 
 class QueryResolution(Enum):
-    AllTime = 'AllTime'
+    All = 'All'  # No resolution into Days/Weeks/Months etc.
     Day = 'Day'
     Week = 'Week'
     Month = 'Month'
@@ -68,6 +68,7 @@ class Query:
     count_what: CountWhat
     group_what: GroupWhat
     resolution: QueryResolution
+    # Dates default to MIN and MAX, giving you the ALL TIME results
     start_date: dt.date = None
     end_date: dt.date = None
 
@@ -125,7 +126,10 @@ class QueryRunner:
         if query.resolution == QueryResolution.Day:
             query_string += ', EXTRACT(YEAR FROM views.timestamp) AS year, EXTRACT(DOY FROM views.timestamp) AS day'
         elif query.resolution == QueryResolution.Week:
-            query_string += ', EXTRACT(YEAR FROM views.timestamp) AS year, EXTRACT(WEEK FROM views.timestamp) AS week'
+            # Note: here we need to extract ISOYEAR, not YEAR, because the WEEK
+            # crosses over YEAR boundaries, e.g. the last week of December.
+            # Using YEAR alone causes a bug where the year and week don't match up.
+            query_string += ', EXTRACT(ISOYEAR FROM views.timestamp) AS year, EXTRACT(WEEK FROM views.timestamp) AS week'
         elif query.resolution == QueryResolution.Month:
             query_string += ', EXTRACT(YEAR FROM views.timestamp) AS year, EXTRACT(MONTH FROM views.timestamp) AS month'
         elif query.resolution == QueryResolution.Year:
@@ -137,9 +141,9 @@ class QueryRunner:
             'AND users.is_bot = :is_bot'
 
         # Assemble GROUP BY (unless resolution == AllTime and QueryWhat == Nothing)
-        if not (query.resolution == QueryResolution.AllTime and query.group_what == GroupWhat.Nothing):
+        if not (query.resolution == QueryResolution.All and query.group_what == GroupWhat.Nothing):
             query_string += ' GROUP BY '
-            if query.resolution == QueryResolution.AllTime:
+            if query.resolution == QueryResolution.All:
                 # No dates involved: just GROUP BY the selected column
                 query_string += query.group_what.get_column_name()
             else:
@@ -188,7 +192,7 @@ class QueryRunner:
         # we queried on something besides the total count.
         date_index = 2 if has_key else 1
 
-        if query.resolution == QueryResolution.AllTime:
+        if query.resolution == QueryResolution.All:
             return [QueryResult(r[0], key=r[1] if has_key else None) for r in result.all()]
         elif query.resolution == QueryResolution.Day:
             return [QueryResult(r[0], key=r[1] if has_key else None, date=util.datetime_from_day(r[date_index], r[date_index+1])) for r in result.all()]
