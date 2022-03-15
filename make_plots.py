@@ -2,7 +2,7 @@ import requests
 import pygal
 import matplotlib.pyplot as plt
 from datetime import datetime
-from typing import List
+from typing import List, Tuple
 """Quick script to make API requests and create plots."""
 
 
@@ -34,25 +34,26 @@ def plot_views_per_week(filename: str, auth_key: str):
         'count_what': 'Views',
         'group_what': 'Nothing',
         'resolution': 'Week',
-        'start_date': '2020-4-1',
-        'end_date': '2022-5-1',
     }
     bot_params = dict(base_params, query_on='Bots')
-    bot_views_per_year = make_request(bot_params, auth_key)
-    bdates, bkeys, bcounts = parse_timeboxed_data(bot_views_per_year)
+    bot_views_per_week = make_request(bot_params, auth_key)
+    bdates, bkeys, bcounts = parse_timeboxed_data(bot_views_per_week)
 
     people_params = dict(base_params, query_on='People')
-    people_views_per_year = make_request(people_params, auth_key)
-    pdates, pkeys, pcounts = parse_timeboxed_data(people_views_per_year)
+    people_views_per_week = make_request(people_params, auth_key)
+    pdates, pkeys, pcounts = parse_timeboxed_data(people_views_per_week)
 
     fig, ax = plt.subplots()
     fig.suptitle('Views per Week')
-    ax.set_xlabel('Date')
     ax.set_ylabel('Number of Views')
     ax.plot(bdates, bcounts, label='Bots', linestyle='--')
     ax.plot(pdates, pcounts, label='People', linestyle='--')
     ax.grid(True)
     fig.legend()
+    # Rotate tick labels 45 degrees https://stackoverflow.com/a/56139690
+    plt.draw()
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
+    fig.subplots_adjust(bottom=0.15)
     fig.savefig(filename)
 
 
@@ -245,66 +246,133 @@ COUNTRY_CODE_MAPPING = {
 }
 
 
-def plot_views_per_country(filename: str, auth_key: str):
-    base_params = {
+def plot_bot_views_per_country(filename: str, auth_key: str):
+    """Render an SVG world map with number of views. filename must end in .svg!"""
+    if not filename.endswith('.svg'):
+        raise ValueError('filename must end in .svg')
+    params = {
+        'query_on': 'Bots',
         'count_what': 'Views',
         'group_what': 'Country',
-        'resolution': 'AllTime',
+        'resolution': 'All',
         'start_date': '2020-4-1',
         'end_date': '2022-5-1',
     }
-
-    bot_params = dict(base_params, query_on='Bots')
-    bot_views_by_country = make_request(bot_params, auth_key)
+    views_by_country = make_request(params, auth_key)
     # Filter out the '' country name (i.e., unknown)
-    bcounts = {COUNTRY_CODE_MAPPING[data['key']]: data['quantity'] for data in bot_views_by_country if data['key'] != ''}
-    bot_map = pygal.maps.world.World()
-    bot_map.title = 'Number of Bot Views per Country, All Time'
-    bot_map.add('All Time', bcounts)
-    bot_map.render_to_file('bot-map.svg')
-
-    people_params = dict(base_params, query_on='People')
-    people_views_by_country = make_request(people_params, auth_key)
-    pcounts = {COUNTRY_CODE_MAPPING[data['key']]: data['quantity'] for data in people_views_by_country if data['key'] != '' and data['key'] != 'Guernsey'}
-    people_map = pygal.maps.world.World()
-    people_map.title = 'Number of Human Views per Country, All Time'
-    people_map.add('All Time', pcounts)
-    people_map.render_to_file('people-map.svg')
+    views_by_country = [v for v in views_by_country if v['key'] != '']
+    # Convert country names to pygal country codes
+    country_data = {COUNTRY_CODE_MAPPING[v['key']]: v['quantity'] for v in views_by_country}
+    map = pygal.maps.world.World()
+    map.title = 'Number of Bot Views by Country'
+    map.add('All Time', country_data)
+    map.render_to_file(filename)
 
 
-def get_all_time_urls(auth_key: str):
-    base_params = {
+def plot_person_views_per_country(filename: str, auth_key: str):
+    """Render an SVG world map with number of views. filename must end in .svg!"""
+    if not filename.endswith('.svg'):
+        raise ValueError('filename must end in .svg')
+    params = {
+        'query_on': 'People',
+        'count_what': 'Views',
+        'group_what': 'Country',
+        'resolution': 'All',
+        'start_date': '2020-4-1',
+        'end_date': '2022-5-1',
+    }
+    views_by_country = make_request(params, auth_key)
+    # Filter out the '' country name and 'Guernsey'
+    views_by_country = [v for v in views_by_country if v['key'] != '' and v['key'] != 'Guernsey']
+    # Convert country names to pygal country codes
+    country_data = {COUNTRY_CODE_MAPPING[v['key']]: v['quantity'] for v in views_by_country}
+    map = pygal.maps.world.World()
+    map.title = 'Number of Person Views by Country'
+    map.add('All Time', country_data)
+    map.render_to_file(filename)
+
+
+def plot_all_time_bot_urls(filename: str, auth_key: str):
+    params = {
+        'query_on': 'Bots',
         'count_what': 'Views',
         'group_what': 'Url',
-        'resolution': 'AllTime',
+        'resolution': 'All',
         'start_date': '2020-4-1',
         'end_date': '2022-5-1',
     }
+    urls_all_time = make_request(params, auth_key)
+    top_ten = sorted(urls_all_time, key=lambda x: x['quantity'], reverse=True)[:10]
+    keys = [b['key'] for b in top_ten]
+    vals = [b['quantity'] for b in top_ten]
+    fig, ax = plt.subplots()
+    fig.suptitle('Most Visited URLs (Bots)')
+    ax.set_xlabel('Number of views')
+    ax.set_ylabel('Url')
+    ax.barh(keys, vals)
+    ax.get_yaxis().set_ticks([])
+    # https://stackoverflow.com/a/30229062
+    for i, v in enumerate(vals):
+        ax.text(v + 20, i - 0.15, keys[i], color='black', fontweight='bold')
+    fig.savefig(filename)
 
-    bot_params = dict(base_params, query_on='Bots')
-    bot_urls_all_time = make_request(bot_params, auth_key)
-    bot_urls_all_time.sort(key=lambda x: x['quantity'], reverse=True)
-    print(bot_urls_all_time)
 
-    people_params = dict(base_params, query_on='People')
-    people_urls_all_time = make_request(people_params, auth_key)
-    people_urls_all_time.sort(key=lambda x: x['quantity'], reverse=True)
-    print(people_urls_all_time)
+def plot_all_time_person_urls(filename: str, auth_key: str):
+    params = {
+        'query_on': 'People',
+        'count_what': 'Views',
+        'group_what': 'Url',
+        'resolution': 'All',
+        'start_date': '2020-4-1',
+        'end_date': '2022-5-1',
+    }
+    urls_all_time = make_request(params, auth_key)
+    top_ten = sorted(urls_all_time, key=lambda x: x['quantity'], reverse=True)[:10]
+    keys = [b['key'] for b in top_ten]
+    vals = [b['quantity'] for b in top_ten]
+    fig, ax = plt.subplots()
+    fig.suptitle('Most Visited URLs (People)')
+    ax.set_xlabel('Number of views')
+    ax.set_ylabel('Url')
+    ax.barh(keys, vals)
+    ax.get_yaxis().set_ticks([])
+    # https://stackoverflow.com/a/30229062
+    for i, v in enumerate(vals):
+        ax.text(v + 20, i - 0.15, keys[i], color='black', fontweight='bold')
+    fig.savefig(filename)
 
 
-def get_all_time_bot_domains(auth_key: str):
+def plot_all_time_bot_domains(filename: str, auth_key: str):
     """Bot domains by number of views, all time."""
     params = {
         'query_on': 'Bots',
         'count_what': 'Views',
         'group_what': 'Domain',
-        'resolution': 'AllTime',
+        'resolution': 'All',
         'start_date': '2020-4-1',
         'end_date': '2022-5-1',
     }
     bot_domains_all_time = make_request(params, auth_key)
-    bot_domains_all_time.sort(key=lambda x: x['quantity'], reverse=True)
-    print(bot_domains_all_time)
+    bot_domains_all_time = [b for b in bot_domains_all_time if b['key'] is not None]
+    top_ten = sorted(bot_domains_all_time, key=lambda x: x['quantity'], reverse=True)[:10]
+    keys = [b['key'] for b in top_ten]
+    vals = [b['quantity'] for b in top_ten]
+    fig, ax = plt.subplots()
+    fig.suptitle('Top Ten Bot Domains')
+    ax.set_xlabel('Number of views')
+    ax.barh(keys, vals)
+    fig.subplots_adjust(left=0.22)
+    for i, v in enumerate(vals):
+        ax.text(v, i - 0.15, vals[i], color='black', fontweight='bold')
+    fig.savefig(filename)
+
+
+def sort_pie_data(data: dict) -> Tuple[List, List]:
+    as_tuples = [(k, v) for k, v in data.items()]
+    as_tuples.sort(key=lambda x: x[1], reverse=True)
+    labels = [t[0] for t in as_tuples]
+    vals = [t[1] for t in as_tuples]
+    return labels, vals
 
 
 def plot_all_time_person_os(filename: str, auth_key: str):
@@ -313,7 +381,7 @@ def plot_all_time_person_os(filename: str, auth_key: str):
         'query_on': 'People',
         'count_what': 'Users',
         'group_what': 'OperatingSystem',
-        'resolution': 'AllTime',
+        'resolution': 'All',
         'start_date': '2020-4-1',
         'end_date': '2022-5-1',
     }
@@ -339,7 +407,8 @@ def plot_all_time_person_os(filename: str, auth_key: str):
 
     fig, ax = plt.subplots()
     fig.suptitle('Person Operating Systems')
-    ax.pie(binned_os_all_time.values(), labels=binned_os_all_time.keys())
+    ax.pie(binned_os_all_time.values(), labels=binned_os_all_time.keys(), autopct='%1.0f%%')
+    fig.tight_layout()
     fig.savefig(filename)
 
 
@@ -349,7 +418,7 @@ def plot_all_time_person_devices(filename: str, auth_key: str):
         'query_on': 'People',
         'count_what': 'Users',
         'group_what': 'Device',
-        'resolution': 'AllTime',
+        'resolution': 'All',
         'start_date': '2020-4-1',
         'end_date': '2022-5-1',
     }
@@ -377,9 +446,11 @@ def plot_all_time_person_devices(filename: str, auth_key: str):
             binned_devices_all_time['Other'] += data['quantity']
 
     fig, ax = plt.subplots()
-    fig.suptitle('Person Device Manufacturers')
-    ax.pie(binned_devices_all_time.values(), labels=binned_devices_all_time.keys())
-    ax.legend()
+    fig.suptitle('Device Manufacturers (People Users)')
+    labels, vals = sort_pie_data(binned_devices_all_time)
+    ax.pie(vals, autopct='%1.0f%%')
+    ax.legend(labels)
+    fig.tight_layout()
     fig.savefig(filename)
 
 
@@ -389,7 +460,7 @@ def plot_all_time_device_types(filename: str, auth_key: str):
         'query_on': 'People',
         'count_what': 'Users',
         'group_what': 'DeviceType',
-        'resolution': 'AllTime',
+        'resolution': 'All',
         'start_date': '2020-4-1',
         'end_date': '2022-5-1',
     }
@@ -399,7 +470,7 @@ def plot_all_time_device_types(filename: str, auth_key: str):
     labels[labels.index('')] = 'Unknown'
     fig, ax = plt.subplots()
     fig.suptitle('Device Types')
-    ax.pie(values, labels=labels)
+    ax.pie(values, labels=labels, autopct='%1.0f%%')
     fig.savefig(filename)
 
 
@@ -409,7 +480,7 @@ def plot_all_time_person_browsers(filename: str, auth_key: str):
         'query_on': 'People',
         'count_what': 'Users',
         'group_what': 'Browser',
-        'resolution': 'AllTime',
+        'resolution': 'All',
         'start_date': '2020-4-1',
         'end_date': '2022-5-1',
     }
@@ -436,12 +507,10 @@ def plot_all_time_person_browsers(filename: str, auth_key: str):
             binned_browsers_all_time['Http-Client'] += data['quantity']
         else:
             binned_browsers_all_time['Other'] += data['quantity']
-    print(binned_browsers_all_time)
     as_tuples = [(k, v) for k, v in binned_browsers_all_time.items()]
     as_tuples.sort(key=lambda x: x[1], reverse=True)
     labels = [t[0] for t in as_tuples]
     vals = [t[1] for t in as_tuples]
-    print(labels)
     fig, ax = plt.subplots()
     fig.suptitle('Person Browsers')
     ax.pie(vals, labels=labels)
@@ -450,12 +519,13 @@ def plot_all_time_person_browsers(filename: str, auth_key: str):
 
 if __name__ == '__main__':
     AUTH_KEY = 'dev'
-
-    # plot_views_per_week('views-per-week.jpg', AUTH_KEY)
-    # plot_views_per_country('views-by-country.jpg', AUTH_KEY)
-    # get_all_time_urls(AUTH_KEY)
-    # get_all_time_bot_domains(AUTH_KEY)
-    # plot_all_time_person_os('operating-systems.jpg', AUTH_KEY)
-    # plot_all_time_person_devices('manufacturers.jpg', AUTH_KEY)
-    # plot_all_time_device_types('devices.jpg', AUTH_KEY)
+    plot_views_per_week('views-per-week.jpg', AUTH_KEY)
+    plot_bot_views_per_country('bot-map.svg', AUTH_KEY)
+    plot_person_views_per_country('people-map.svg', AUTH_KEY)
+    plot_all_time_bot_urls('bot-views.jpg', AUTH_KEY)
+    plot_all_time_person_urls('person-views.jpg', AUTH_KEY)
+    plot_all_time_bot_domains('bot-domains.jpg', AUTH_KEY)
+    plot_all_time_person_os('operating-systems.jpg', AUTH_KEY)
+    plot_all_time_person_devices('manufacturers.jpg', AUTH_KEY)
+    plot_all_time_device_types('devices.jpg', AUTH_KEY)
     plot_all_time_person_browsers('browsers.jpg', AUTH_KEY)
