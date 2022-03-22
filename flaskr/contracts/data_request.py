@@ -1,4 +1,3 @@
-import enum
 import datetime as dt
 import marshmallow as msh
 import dataclasses as dc
@@ -15,10 +14,6 @@ class DataRequestContract:
     resolution: QueryResolution
     start_date: dt.date = None
     end_date: dt.date = None
-
-    class Meta:
-        # Define date format
-        dateformat = '%m-%d-%Y'
 
     @staticmethod
     def get_schema() -> msh.Schema:
@@ -43,6 +38,10 @@ class DataRequestSchema(msh.Schema):
     resolution = msh_enum.EnumField(QueryResolution, required=True, allow_none=False)
     start_date = msh.fields.Date(required=False, allow_none=True)
     end_date = msh.fields.Date(required=False, allow_none=True)
+
+    class Meta:
+        # Define date format
+        dateformat = '%m-%d-%Y'
 
     @msh.post_load
     def make_contract(self, data, **kwargs) -> DataRequestContract:
