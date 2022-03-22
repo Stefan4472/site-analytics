@@ -1,3 +1,4 @@
+import sys
 import requests
 import pygal
 import matplotlib.pyplot as plt
@@ -17,6 +18,10 @@ def make_request(params: dict, auth_key: str) -> List:
     return r.json()
 
 
+def format_date(date: datetime):
+    return datetime.strftime(date, '%m-%d-%Y')
+
+
 def parse_timeboxed_data(_json) -> ([datetime], [str], [int]):
     dates: List[datetime] = []
     keys: List[str] = []
@@ -29,11 +34,17 @@ def parse_timeboxed_data(_json) -> ([datetime], [str], [int]):
     return dates, keys, counts
 
 
-def plot_views_per_week(filename: str, auth_key: str):
+def plot_views_per_week(
+        start_date: datetime,
+        end_date: datetime,
+        auth_key: str,
+) -> Tuple['plt.Figure', 'plt.Axes']:
     base_params = {
         'count_what': 'Views',
         'group_what': 'Nothing',
         'resolution': 'Week',
+        'start_date': format_date(start_date),
+        'end_date': format_date(end_date),
     }
     bot_params = dict(base_params, query_on='Bots')
     bot_views_per_week = make_request(bot_params, auth_key)
@@ -54,7 +65,258 @@ def plot_views_per_week(filename: str, auth_key: str):
     plt.draw()
     ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right')
     fig.subplots_adjust(bottom=0.15)
-    fig.savefig(filename)
+    return fig, ax
+
+
+def plot_all_time_bot_urls(
+        start_date: datetime,
+        end_date: datetime,
+        auth_key: str,
+) -> Tuple['plt.Figure', 'plt.Axes']:
+    params = {
+        'query_on': 'Bots',
+        'count_what': 'Views',
+        'group_what': 'Url',
+        'resolution': 'All',
+        'start_date': format_date(start_date),
+        'end_date': format_date(end_date),
+    }
+    urls_all_time = make_request(params, auth_key)
+    top_ten = sorted(urls_all_time, key=lambda x: x['quantity'], reverse=True)[:10]
+    keys = [b['key'] for b in top_ten]
+    vals = [b['quantity'] for b in top_ten]
+    fig, ax = plt.subplots()
+    fig.suptitle('Most Visited URLs (Bots)')
+    ax.set_xlabel('Number of views')
+    ax.set_ylabel('Url')
+    ax.barh(keys, vals)
+    ax.get_yaxis().set_ticks([])
+    # https://stackoverflow.com/a/30229062
+    for i, v in enumerate(vals):
+        ax.text(v + 20, i - 0.15, keys[i], color='black', fontweight='bold')
+    return fig, ax
+
+
+def plot_all_time_person_urls(
+        start_date: datetime,
+        end_date: datetime,
+        auth_key: str,
+) -> Tuple['plt.Figure', 'plt.Axes']:
+    params = {
+        'query_on': 'People',
+        'count_what': 'Views',
+        'group_what': 'Url',
+        'resolution': 'All',
+        'start_date': format_date(start_date),
+        'end_date': format_date(end_date),
+    }
+    urls_all_time = make_request(params, auth_key)
+    top_ten = sorted(urls_all_time, key=lambda x: x['quantity'], reverse=True)[:10]
+    keys = [b['key'] for b in top_ten]
+    vals = [b['quantity'] for b in top_ten]
+    fig, ax = plt.subplots()
+    fig.suptitle('Most Visited URLs (People)')
+    ax.set_xlabel('Number of views')
+    ax.set_ylabel('Url')
+    ax.barh(keys, vals)
+    ax.get_yaxis().set_ticks([])
+    # https://stackoverflow.com/a/30229062
+    for i, v in enumerate(vals):
+        ax.text(v + 20, i - 0.15, keys[i], color='black', fontweight='bold')
+    return fig, ax
+
+
+def plot_all_time_bot_domains(
+        start_date: datetime,
+        end_date: datetime,
+        auth_key: str,
+) -> Tuple['plt.Figure', 'plt.Axes']:
+    """Bot domains by number of views, all time."""
+    params = {
+        'query_on': 'Bots',
+        'count_what': 'Views',
+        'group_what': 'Domain',
+        'resolution': 'All',
+        'start_date': format_date(start_date),
+        'end_date': format_date(end_date),
+    }
+    bot_domains_all_time = make_request(params, auth_key)
+    bot_domains_all_time = [b for b in bot_domains_all_time if b['key'] is not None]
+    top_ten = sorted(bot_domains_all_time, key=lambda x: x['quantity'], reverse=True)[:10]
+    keys = [b['key'] for b in top_ten]
+    vals = [b['quantity'] for b in top_ten]
+    fig, ax = plt.subplots()
+    fig.suptitle('Top Ten Bot Domains')
+    ax.set_xlabel('Number of views')
+    ax.barh(keys, vals)
+    fig.subplots_adjust(left=0.22)
+    for i, v in enumerate(vals):
+        ax.text(v, i - 0.15, vals[i], color='black', fontweight='bold')
+    return fig, ax
+
+
+def sort_pie_data(data: dict) -> Tuple[List, List]:
+    as_tuples = [(k, v) for k, v in data.items()]
+    as_tuples.sort(key=lambda x: x[1], reverse=True)
+    labels = [t[0] for t in as_tuples]
+    vals = [t[1] for t in as_tuples]
+    return labels, vals
+
+
+def plot_all_time_person_os(
+        start_date: datetime,
+        end_date: datetime,
+        auth_key: str,
+) -> Tuple['plt.Figure', 'plt.Axes']:
+    """Operating Systems by number of person-users, all time."""
+    params = {
+        'query_on': 'People',
+        'count_what': 'Users',
+        'group_what': 'OperatingSystem',
+        'resolution': 'All',
+        'start_date': format_date(start_date),
+        'end_date': format_date(end_date),
+    }
+    people_os_all_time = make_request(params, auth_key)
+    # Standardize keys
+    binned_os_all_time = \
+        {'Android': 0, 'iOS': 0, 'Linux/Unix': 0, 'MAC': 0, 'Windows': 0, 'Other': 0}
+    for data in people_os_all_time:
+        if data['key'].startswith('Android'):
+            binned_os_all_time['Android'] += data['quantity']
+        elif data['key'].startswith('iOS'):
+            binned_os_all_time['iOS'] += data['quantity']
+        elif data['key'].startswith('Linux') or data['key'].startswith('Ubuntu'):
+            binned_os_all_time['Linux/Unix'] += data['quantity']
+        elif data['key'].startswith('Mac'):
+            binned_os_all_time['MAC'] += data['quantity']
+        elif data['key'].startswith('Windows'):
+            binned_os_all_time['Windows'] += data['quantity']
+        else:
+            binned_os_all_time['Other'] += data['quantity']
+
+    fig, ax = plt.subplots()
+    fig.suptitle('Person Operating Systems')
+    ax.pie(binned_os_all_time.values(), labels=binned_os_all_time.keys(), autopct='%1.0f%%')
+    fig.tight_layout()
+    return fig, ax
+
+
+def plot_all_time_person_devices(
+        start_date: datetime,
+        end_date: datetime,
+        auth_key: str,
+) -> Tuple['plt.Figure', 'plt.Axes']:
+    """Devices by number of person-users, all time."""
+    params = {
+        'query_on': 'People',
+        'count_what': 'Users',
+        'group_what': 'Device',
+        'resolution': 'All',
+        'start_date': format_date(start_date),
+        'end_date': format_date(end_date),
+    }
+    people_devices_all_time = make_request(params, auth_key)
+    # Standardize keys
+    binned_devices_all_time = {
+        'Huawei': 0, 'Apple': 0, 'XiaoMi': 0, 'Samsung': 0, 'Google': 0,
+        'Other Android': 0, 'Other': 0, 'Unknown': 0}
+    for data in people_devices_all_time:
+        if 'Huawei' in data['key']:
+            binned_devices_all_time['Huawei'] += data['quantity']
+        elif 'Apple' in data['key']:
+            binned_devices_all_time['Apple'] += data['quantity']
+        elif 'XiaoMi' in data['key']:
+            binned_devices_all_time['XiaoMi'] += data['quantity']
+        elif 'Samsung' in data['key']:
+            binned_devices_all_time['Samsung'] += data['quantity']
+        elif 'Android' in data['key']:
+            binned_devices_all_time['Other Android'] += data['quantity']
+        elif 'Google' in data['key']:
+            binned_devices_all_time['Google'] += data['quantity']
+        elif data['key'] == '' or 'Generic' in data['key']:
+            binned_devices_all_time['Unknown'] += data['quantity']
+        else:
+            binned_devices_all_time['Other'] += data['quantity']
+
+    fig, ax = plt.subplots()
+    fig.suptitle('Device Manufacturers (People Users)')
+    labels, vals = sort_pie_data(binned_devices_all_time)
+    ax.pie(vals, autopct=lambda pct: ('%1.0f%%' % pct) if pct > 2 else '')
+    ax.legend(labels)
+    fig.tight_layout()
+    return fig, ax
+
+
+def plot_all_time_device_types(
+        start_date: datetime,
+        end_date: datetime,
+        auth_key: str,
+) -> Tuple['plt.Figure', 'plt.Axes']:
+    """Devices by number of person-users, all time."""
+    params = {
+        'query_on': 'People',
+        'count_what': 'Users',
+        'group_what': 'DeviceType',
+        'resolution': 'All',
+        'start_date': format_date(start_date),
+        'end_date': format_date(end_date),
+    }
+    people_devices_all_time = make_request(params, auth_key)
+    values = [d['quantity'] for d in people_devices_all_time]
+    labels = [d['key'] for d in people_devices_all_time]
+    labels[labels.index('')] = 'Unknown'
+    fig, ax = plt.subplots()
+    fig.suptitle('Device Types')
+    ax.pie(values, labels=labels, autopct='%1.0f%%')
+    return fig, ax
+
+
+def plot_all_time_person_browsers(
+        start_date: datetime,
+        end_date: datetime,
+        auth_key: str,
+) -> Tuple['plt.Figure', 'plt.Axes']:
+    """Browser by number of person-users, all time."""
+    params = {
+        'query_on': 'People',
+        'count_what': 'Users',
+        'group_what': 'Browser',
+        'resolution': 'All',
+        'start_date': format_date(start_date),
+        'end_date': format_date(end_date),
+    }
+    people_browsers_all_time = make_request(params, auth_key)
+    # Standardize keys
+    binned_browsers_all_time = {
+        'Chrome': 0, 'Edge': 0, 'Firefox': 0, 'Safari': 0, 'Opera': 0, 'IE': 0, 'Http-Client': 0, 'Other': 0, 'Unknown': 0}
+    for data in people_browsers_all_time:
+        if 'Chrome' in data['key']:
+            binned_browsers_all_time['Chrome'] += data['quantity']
+        elif 'Edge' in data['key']:
+            binned_browsers_all_time['Edge'] += data['quantity']
+        elif 'Firefox' in data['key']:
+            binned_browsers_all_time['Firefox'] += data['quantity']
+        elif 'Safari' in data['key']:
+            binned_browsers_all_time['Safari'] += data['quantity']
+        elif 'Opera' in data['key']:
+            binned_browsers_all_time['Opera'] += data['quantity']
+        elif 'IE' in data['key']:
+            binned_browsers_all_time['IE'] += data['quantity']
+        elif 'Other' in data['key']:
+            binned_browsers_all_time['Unknown'] += data['quantity']
+        elif 'Http' in data['key'] or 'http' in data['key']:
+            binned_browsers_all_time['Http-Client'] += data['quantity']
+        else:
+            binned_browsers_all_time['Other'] += data['quantity']
+    as_tuples = [(k, v) for k, v in binned_browsers_all_time.items()]
+    as_tuples.sort(key=lambda x: x[1], reverse=True)
+    labels = [t[0] for t in as_tuples]
+    vals = [t[1] for t in as_tuples]
+    fig, ax = plt.subplots()
+    fig.suptitle('Person Browsers')
+    ax.pie(vals, labels=labels, autopct=lambda pct: ('%1.0f%%' % pct) if pct > 3 else '')
+    return fig, ax
 
 
 # Map Geo-API country name to pygal country code
@@ -246,286 +508,91 @@ COUNTRY_CODE_MAPPING = {
 }
 
 
-def plot_bot_views_per_country(filename: str, auth_key: str):
-    """Render an SVG world map with number of views. filename must end in .svg!"""
-    if not filename.endswith('.svg'):
-        raise ValueError('filename must end in .svg')
+def plot_bot_views_per_country(
+        start_date: datetime,
+        end_date: datetime,
+        auth_key: str,
+) -> 'pygal.maps.world.World':
+    """Return pygal world map with number of bot-views per country."""
     params = {
         'query_on': 'Bots',
         'count_what': 'Views',
         'group_what': 'Country',
         'resolution': 'All',
-        'start_date': '2020-4-1',
-        'end_date': '2022-5-1',
+        'start_date': format_date(start_date),
+        'end_date': format_date(end_date),
     }
     views_by_country = make_request(params, auth_key)
     # Filter out the '' country name (i.e., unknown)
     views_by_country = [v for v in views_by_country if v['key'] != '']
     # Convert country names to pygal country codes
     country_data = {COUNTRY_CODE_MAPPING[v['key']]: v['quantity'] for v in views_by_country}
-    map = pygal.maps.world.World()
-    map.title = 'Number of Bot Views by Country'
-    map.add('All Time', country_data)
-    map.render_to_file(filename)
+    map = pygal.maps.world.World(style=pygal.style.RedBlueStyle)
+    map.title = 'Views by Country (Bots)'
+    map.add('', country_data)
+    return map
 
 
-def plot_person_views_per_country(filename: str, auth_key: str):
-    """Render an SVG world map with number of views. filename must end in .svg!"""
-    if not filename.endswith('.svg'):
-        raise ValueError('filename must end in .svg')
+def plot_person_views_per_country(
+        start_date: datetime,
+        end_date: datetime,
+        auth_key: str,
+) -> 'pygal.maps.world.World':
+    """Return pygal world map with number of person-users per country."""
     params = {
         'query_on': 'People',
-        'count_what': 'Views',
+        'count_what': 'Users',
         'group_what': 'Country',
         'resolution': 'All',
-        'start_date': '2020-4-1',
-        'end_date': '2022-5-1',
+        'start_date': format_date(start_date),
+        'end_date': format_date(end_date),
     }
     views_by_country = make_request(params, auth_key)
     # Filter out the '' country name and 'Guernsey'
     views_by_country = [v for v in views_by_country if v['key'] != '' and v['key'] != 'Guernsey']
     # Convert country names to pygal country codes
     country_data = {COUNTRY_CODE_MAPPING[v['key']]: v['quantity'] for v in views_by_country}
-    map = pygal.maps.world.World()
-    map.title = 'Number of Person Views by Country'
-    map.add('All Time', country_data)
-    map.render_to_file(filename)
-
-
-def plot_all_time_bot_urls(filename: str, auth_key: str):
-    params = {
-        'query_on': 'Bots',
-        'count_what': 'Views',
-        'group_what': 'Url',
-        'resolution': 'All',
-        'start_date': '2020-4-1',
-        'end_date': '2022-5-1',
-    }
-    urls_all_time = make_request(params, auth_key)
-    top_ten = sorted(urls_all_time, key=lambda x: x['quantity'], reverse=True)[:10]
-    keys = [b['key'] for b in top_ten]
-    vals = [b['quantity'] for b in top_ten]
-    fig, ax = plt.subplots()
-    fig.suptitle('Most Visited URLs (Bots)')
-    ax.set_xlabel('Number of views')
-    ax.set_ylabel('Url')
-    ax.barh(keys, vals)
-    ax.get_yaxis().set_ticks([])
-    # https://stackoverflow.com/a/30229062
-    for i, v in enumerate(vals):
-        ax.text(v + 20, i - 0.15, keys[i], color='black', fontweight='bold')
-    fig.savefig(filename)
-
-
-def plot_all_time_person_urls(filename: str, auth_key: str):
-    params = {
-        'query_on': 'People',
-        'count_what': 'Views',
-        'group_what': 'Url',
-        'resolution': 'All',
-        'start_date': '2020-4-1',
-        'end_date': '2022-5-1',
-    }
-    urls_all_time = make_request(params, auth_key)
-    top_ten = sorted(urls_all_time, key=lambda x: x['quantity'], reverse=True)[:10]
-    keys = [b['key'] for b in top_ten]
-    vals = [b['quantity'] for b in top_ten]
-    fig, ax = plt.subplots()
-    fig.suptitle('Most Visited URLs (People)')
-    ax.set_xlabel('Number of views')
-    ax.set_ylabel('Url')
-    ax.barh(keys, vals)
-    ax.get_yaxis().set_ticks([])
-    # https://stackoverflow.com/a/30229062
-    for i, v in enumerate(vals):
-        ax.text(v + 20, i - 0.15, keys[i], color='black', fontweight='bold')
-    fig.savefig(filename)
-
-
-def plot_all_time_bot_domains(filename: str, auth_key: str):
-    """Bot domains by number of views, all time."""
-    params = {
-        'query_on': 'Bots',
-        'count_what': 'Views',
-        'group_what': 'Domain',
-        'resolution': 'All',
-        'start_date': '2020-4-1',
-        'end_date': '2022-5-1',
-    }
-    bot_domains_all_time = make_request(params, auth_key)
-    bot_domains_all_time = [b for b in bot_domains_all_time if b['key'] is not None]
-    top_ten = sorted(bot_domains_all_time, key=lambda x: x['quantity'], reverse=True)[:10]
-    keys = [b['key'] for b in top_ten]
-    vals = [b['quantity'] for b in top_ten]
-    fig, ax = plt.subplots()
-    fig.suptitle('Top Ten Bot Domains')
-    ax.set_xlabel('Number of views')
-    ax.barh(keys, vals)
-    fig.subplots_adjust(left=0.22)
-    for i, v in enumerate(vals):
-        ax.text(v, i - 0.15, vals[i], color='black', fontweight='bold')
-    fig.savefig(filename)
-
-
-def sort_pie_data(data: dict) -> Tuple[List, List]:
-    as_tuples = [(k, v) for k, v in data.items()]
-    as_tuples.sort(key=lambda x: x[1], reverse=True)
-    labels = [t[0] for t in as_tuples]
-    vals = [t[1] for t in as_tuples]
-    return labels, vals
-
-
-def plot_all_time_person_os(filename: str, auth_key: str):
-    """Operating Systems by number of person-users, all time."""
-    params = {
-        'query_on': 'People',
-        'count_what': 'Users',
-        'group_what': 'OperatingSystem',
-        'resolution': 'All',
-        'start_date': '2020-4-1',
-        'end_date': '2022-5-1',
-    }
-    people_os_all_time = make_request(params, auth_key)
-    # Standardize keys
-    binned_os_all_time = \
-        {'Android': 0, 'iOS': 0, 'Linux/Unix': 0, 'MAC': 0, 'Windows': 0, 'Other': 0}
-    for data in people_os_all_time:
-        if data['key'].startswith('Android'):
-            binned_os_all_time['Android'] += data['quantity']
-        elif data['key'].startswith('iOS'):
-            binned_os_all_time['iOS'] += data['quantity']
-        elif data['key'].startswith('Linux') or data['key'].startswith('Ubuntu'):
-            binned_os_all_time['Linux/Unix'] += data['quantity']
-        elif data['key'].startswith('Mac'):
-            binned_os_all_time['MAC'] += data['quantity']
-        elif data['key'].startswith('Windows'):
-            binned_os_all_time['Windows'] += data['quantity']
-        elif data['key'].startswith('Other'):
-            binned_os_all_time['Other'] += data['quantity']
-        else:
-            print(data)
-
-    fig, ax = plt.subplots()
-    fig.suptitle('Person Operating Systems')
-    ax.pie(binned_os_all_time.values(), labels=binned_os_all_time.keys(), autopct='%1.0f%%')
-    fig.tight_layout()
-    fig.savefig(filename)
-
-
-def plot_all_time_person_devices(filename: str, auth_key: str):
-    """Devices by number of person-users, all time."""
-    params = {
-        'query_on': 'People',
-        'count_what': 'Users',
-        'group_what': 'Device',
-        'resolution': 'All',
-        'start_date': '2020-4-1',
-        'end_date': '2022-5-1',
-    }
-    people_devices_all_time = make_request(params, auth_key)
-    # Standardize keys
-    binned_devices_all_time = {
-        'Huawei': 0, 'Apple': 0, 'XiaoMi': 0, 'Samsung': 0, 'Google': 0,
-        'Other Android': 0, 'Other': 0, 'Unknown': 0}
-    for data in people_devices_all_time:
-        if 'Huawei' in data['key']:
-            binned_devices_all_time['Huawei'] += data['quantity']
-        elif 'Apple' in data['key']:
-            binned_devices_all_time['Apple'] += data['quantity']
-        elif 'XiaoMi' in data['key']:
-            binned_devices_all_time['XiaoMi'] += data['quantity']
-        elif 'Samsung' in data['key']:
-            binned_devices_all_time['Samsung'] += data['quantity']
-        elif 'Android' in data['key']:
-            binned_devices_all_time['Other Android'] += data['quantity']
-        elif 'Google' in data['key']:
-            binned_devices_all_time['Google'] += data['quantity']
-        elif data['key'] == '' or 'Generic' in data['key']:
-            binned_devices_all_time['Unknown'] += data['quantity']
-        else:
-            binned_devices_all_time['Other'] += data['quantity']
-
-    fig, ax = plt.subplots()
-    fig.suptitle('Device Manufacturers (People Users)')
-    labels, vals = sort_pie_data(binned_devices_all_time)
-    ax.pie(vals, autopct='%1.0f%%')
-    ax.legend(labels)
-    fig.tight_layout()
-    fig.savefig(filename)
-
-
-def plot_all_time_device_types(filename: str, auth_key: str):
-    """Devices by number of person-users, all time."""
-    params = {
-        'query_on': 'People',
-        'count_what': 'Users',
-        'group_what': 'DeviceType',
-        'resolution': 'All',
-        'start_date': '2020-4-1',
-        'end_date': '2022-5-1',
-    }
-    people_devices_all_time = make_request(params, auth_key)
-    values = [d['quantity'] for d in people_devices_all_time]
-    labels = [d['key'] for d in people_devices_all_time]
-    labels[labels.index('')] = 'Unknown'
-    fig, ax = plt.subplots()
-    fig.suptitle('Device Types')
-    ax.pie(values, labels=labels, autopct='%1.0f%%')
-    fig.savefig(filename)
-
-
-def plot_all_time_person_browsers(filename: str, auth_key: str):
-    """Browser by number of person-users, all time."""
-    params = {
-        'query_on': 'People',
-        'count_what': 'Users',
-        'group_what': 'Browser',
-        'resolution': 'All',
-        'start_date': '2020-4-1',
-        'end_date': '2022-5-1',
-    }
-    people_browsers_all_time = make_request(params, auth_key)
-    # Standardize keys
-    binned_browsers_all_time = {
-        'Chrome': 0, 'Edge': 0, 'Firefox': 0, 'Safari': 0, 'Opera': 0, 'IE': 0, 'Http-Client': 0, 'Other': 0, 'Unknown': 0}
-    for data in people_browsers_all_time:
-        if 'Chrome' in data['key']:
-            binned_browsers_all_time['Chrome'] += data['quantity']
-        elif 'Edge' in data['key']:
-            binned_browsers_all_time['Edge'] += data['quantity']
-        elif 'Firefox' in data['key']:
-            binned_browsers_all_time['Firefox'] += data['quantity']
-        elif 'Safari' in data['key']:
-            binned_browsers_all_time['Safari'] += data['quantity']
-        elif 'Opera' in data['key']:
-            binned_browsers_all_time['Opera'] += data['quantity']
-        elif 'IE' in data['key']:
-            binned_browsers_all_time['IE'] += data['quantity']
-        elif 'Other' in data['key']:
-            binned_browsers_all_time['Unknown'] += data['quantity']
-        elif 'Http' in data['key'] or 'http' in data['key']:
-            binned_browsers_all_time['Http-Client'] += data['quantity']
-        else:
-            binned_browsers_all_time['Other'] += data['quantity']
-    as_tuples = [(k, v) for k, v in binned_browsers_all_time.items()]
-    as_tuples.sort(key=lambda x: x[1], reverse=True)
-    labels = [t[0] for t in as_tuples]
-    vals = [t[1] for t in as_tuples]
-    fig, ax = plt.subplots()
-    fig.suptitle('Person Browsers')
-    ax.pie(vals, labels=labels)
-    fig.savefig(filename)
+    from pygal.style import BlueStyle
+    map = pygal.maps.world.World(style=BlueStyle)
+    map.title = 'Unique IP Addresses by Country (People)'
+    map.add('', country_data)
+    return map
 
 
 if __name__ == '__main__':
-    AUTH_KEY = 'dev'
-    plot_views_per_week('views-per-week.jpg', AUTH_KEY)
-    plot_bot_views_per_country('bot-map.svg', AUTH_KEY)
-    plot_person_views_per_country('people-map.svg', AUTH_KEY)
-    plot_all_time_bot_urls('bot-views.jpg', AUTH_KEY)
-    plot_all_time_person_urls('person-views.jpg', AUTH_KEY)
-    plot_all_time_bot_domains('bot-domains.jpg', AUTH_KEY)
-    plot_all_time_person_os('operating-systems.jpg', AUTH_KEY)
-    plot_all_time_person_devices('manufacturers.jpg', AUTH_KEY)
-    plot_all_time_device_types('devices.jpg', AUTH_KEY)
-    plot_all_time_person_browsers('browsers.jpg', AUTH_KEY)
+    """Usage: make_plots.py [AUTH_KEY]"""
+    if len(sys.argv) != 2:
+        raise ValueError('Invalid number of arguments, pass AUTH_KEY as arg')
+    AUTH_KEY = sys.argv[1]
+    start = datetime(2020, 4, 1)
+    end = datetime(2022, 3, 20)
+
+    fig, _ = plot_views_per_week(start, end, AUTH_KEY)
+    fig.savefig('views-per-week.jpg')
+
+    fig, _ = plot_all_time_bot_urls(start, end, AUTH_KEY)
+    fig.savefig('bot-urls.jpg')
+
+    fig, _ = plot_all_time_person_urls(start, end, AUTH_KEY)
+    fig.savefig('person-urls.jpg')
+
+    fig, _ = plot_all_time_bot_domains(start, end, AUTH_KEY)
+    fig.savefig('bot-domains.jpg')
+
+    fig, _ = plot_all_time_person_os(start, end, AUTH_KEY)
+    fig.savefig('person-operating-systems.jpg')
+
+    fig, _ = plot_all_time_person_devices(start, end, AUTH_KEY)
+    fig.savefig('person-devices.jpg')
+
+    fig, _ = plot_all_time_device_types(start, end, AUTH_KEY)
+    fig.savefig('person-device-types.jpg')
+
+    fig, _ = plot_all_time_person_browsers(start, end, AUTH_KEY)
+    fig.savefig('person-browsers.jpg')
+
+    bots_map = plot_bot_views_per_country(start, end, AUTH_KEY)
+    bots_map.render_to_file('bots-map.svg')
+
+    people_map = plot_person_views_per_country(start, end, AUTH_KEY)
+    people_map.render_to_file('people-map.svg')
