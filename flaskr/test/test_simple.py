@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-import pathlib
 import tempfile
 
 import pytest
@@ -20,40 +19,22 @@ import pytest
 from flaskr import create_app, db
 from flaskr.config import SiteConfig
 
-# TODO: SET UP A .FLASKENV FOR TESTING
 PYTEST_SECRET_KEY = "dev"
-PYTEST_POSTGRES_USERNAME = "<INSERT_TESTER_USERNAME>"
-PYTEST_POSTGRES_PASSWORD = "<INSERT_TESTER_PASSWORD>"
-PYTEST_POSTGRES_HOST = "127.0.0.1"
-PYTEST_POSTGRES_PORT = 5433
-PYTEST_POSTGRES_DATABASE_NAME = "test_siteanalytics"
 
 
 @pytest.fixture
 def client():
-    # Create temporary file for logging
-    log_fd, log_path = tempfile.mkstemp()
-
-    app = create_app(
-        SiteConfig(
-            PYTEST_SECRET_KEY,
-            PYTEST_POSTGRES_USERNAME,
-            PYTEST_POSTGRES_PASSWORD,
-            PYTEST_POSTGRES_HOST,
-            PYTEST_POSTGRES_PORT,
-            PYTEST_POSTGRES_DATABASE_NAME,
-            log_path=pathlib.Path(log_path),
-        )
-    )
-
+    """Creates an app with a temporary instance folder."""
+    instance_descriptor, instance_path = tempfile.mkstemp()
+    app = create_app(test_config=SiteConfig(PYTEST_SECRET_KEY, instance_path))
     with app.test_client() as client:
         with app.app_context():
             db.drop_all()
             db.create_all()
         yield client
 
-    os.close(log_fd)
-    os.unlink(log_path)
+    os.close(instance_descriptor)
+    os.unlink(instance_path)
 
 
 def test_traffic(client):
