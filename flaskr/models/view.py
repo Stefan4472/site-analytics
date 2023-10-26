@@ -11,13 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import user_agents
 from datetime import datetime
+
+import user_agents
+
 from flaskr import db
 
 
 class View(db.Model):
-    __tablename__ = 'views'
+    __tablename__ = "views"
     id = db.Column(db.Integer, primary_key=True)
     url = db.Column(db.String, nullable=False)
     user_agent = db.Column(db.String, nullable=False)
@@ -27,36 +29,44 @@ class View(db.Model):
     device = db.Column(db.String)
     device_type = db.Column(db.String)
     # Associated User
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    my_user = db.relationship('User', back_populates='my_views')
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    my_user = db.relationship("User", back_populates="my_views")
 
     def __init__(
-            self,
-            url: str,
-            user_agent: str,
-            timestamp: datetime,
+        self,
+        url: str,
+        user_agent: str,
+        timestamp: datetime,
     ):
         self.url = url
         self.user_agent = user_agent
         self.timestamp = timestamp
 
         agent = user_agents.parse(self.user_agent)
-        self.operating_system = agent.os.family + ' ' + agent.os.version_string
-        self.browser = agent.browser.family + ' ' + agent.browser.version_string
-        self.device = agent.device.family + ' ' + \
-            agent.device.brand if agent.device.brand else ''
-        self.device_type = 'Mobile' if agent.is_mobile else 'Tablet' if \
-            agent.is_tablet else 'PC' if agent.is_pc else ''
+        self.operating_system = agent.os.family + " " + agent.os.version_string
+        self.browser = agent.browser.family + " " + agent.browser.version_string
+        self.device = (
+            agent.device.family + " " + agent.device.brand if agent.device.brand else ""
+        )
+        self.device_type = (
+            "Mobile"
+            if agent.is_mobile
+            else "Tablet"
+            if agent.is_tablet
+            else "PC"
+            if agent.is_pc
+            else ""
+        )
 
     def is_bot(self) -> bool:
         agent = user_agents.parse(self.user_agent)
         if agent.is_bot:
             return True
-        elif 'bot' in self.user_agent.lower():
+        elif "bot" in self.user_agent.lower():
             return True
-        elif 'scan' in self.user_agent.lower():
+        elif "scan" in self.user_agent.lower():
             return True
-        elif 'request' in self.user_agent.lower():
+        elif "request" in self.user_agent.lower():
             return True
         else:
             return False

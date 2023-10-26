@@ -11,9 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pathlib
 import dataclasses as dc
+import pathlib
 from os import environ
+
 from dotenv import load_dotenv
 
 
@@ -29,19 +30,21 @@ class SiteConfig:
     sqlalchemy_track_modifications: bool = None
 
     @staticmethod
-    def load_from_env(dotenv_path: str = None) -> 'SiteConfig':
+    def load_from_env(dotenv_path: str = None) -> "SiteConfig":
         if dotenv_path:
             # Load environment variables
             load_dotenv(dotenv_path)
         return SiteConfig(
-            environ.get('SECRET_KEY'),
-            environ.get('POSTGRES_USERNAME'),
-            environ.get('POSTGRES_PASSWORD'),
-            environ.get('POSTGRES_HOST'),
-            int(environ.get('POSTGRES_PORT')),
-            environ.get('POSTGRES_DATABASE_NAME'),
-            pathlib.Path(environ.get('SITEANALYTICS_LOG_PATH'))
-                if environ.get('SITEANALYTICS_LOG_PATH') else None,
-            bool(environ.get('SQLALCHEMY_TRACK_MODIFICATIONS'))
-                if environ.get('SQLALCHEMY_TRACK_MODIFICATIONS') else None,
+            environ.get("SECRET_KEY"),
+            environ.get("POSTGRES_USERNAME"),
+            environ.get("POSTGRES_PASSWORD"),
+            environ.get("POSTGRES_HOST"),
+            int(environ.get("POSTGRES_PORT")),
+            environ.get("POSTGRES_DATABASE_NAME"),
+            pathlib.Path(environ.get("SITEANALYTICS_LOG_PATH"))
+            if environ.get("SITEANALYTICS_LOG_PATH")
+            else None,
+            bool(environ.get("SQLALCHEMY_TRACK_MODIFICATIONS"))
+            if environ.get("SQLALCHEMY_TRACK_MODIFICATIONS")
+            else None,
         )

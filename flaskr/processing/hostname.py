@@ -14,22 +14,21 @@
 import socket
 import typing
 
-
 # TODO: NARROW THE LIST? SEE HOW WELL THE "REQUESTS-PER-SECOND" METRIC WORKS
 BOT_KEYWORDS = [
-    'bot',
-    'scan',
-    'surf',
-    'spider',
-    'crawl',
-    'pool',
-    'ip189',
-    'amazon',
-    'google',
-    'bezeqint',
-    'greenhousedata',
-    'comcastbusiness',
-    'dataprovider',
+    "bot",
+    "scan",
+    "surf",
+    "spider",
+    "crawl",
+    "pool",
+    "ip189",
+    "amazon",
+    "google",
+    "bezeqint",
+    "greenhousedata",
+    "comcastbusiness",
+    "dataprovider",
 ]
 
 
@@ -37,20 +36,20 @@ def lookup_hostname(ip_address: str) -> str:
     try:
         hostname = socket.gethostbyaddr(ip_address)[0]
     except (socket.herror, socket.gaierror):
-        raise ValueError('Socket error')
+        raise ValueError("Socket error")
 
     # For the rare case that 'hostname' = Nan
     if isinstance(hostname, float):
-        raise ValueError('hostname = Nan')
+        raise ValueError("hostname = Nan")
 
     return hostname
 
 
 def domain_from_hostname(hostname) -> typing.Optional[str]:
-    if not hostname or '.' not in hostname:
+    if not hostname or "." not in hostname:
         return hostname
-    segments = hostname.split('.')
-    return segments[-2] + '.' + segments[-1]
+    segments = hostname.split(".")
+    return segments[-2] + "." + segments[-1]
 
 
 def is_bot(hostname: str) -> bool:

@@ -11,16 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import datetime as dt
-import marshmallow as msh
 import dataclasses as dc
+import datetime as dt
+
+import marshmallow as msh
 import marshmallow_enum as msh_enum
-from flaskr.processing.query_runner import Query, QueryOn, CountWhat, QueryResolution, GroupWhat
+
+from flaskr.processing.query_runner import (CountWhat, GroupWhat, Query,
+                                            QueryOn, QueryResolution)
 
 
 @dc.dataclass
 class DataRequestContract:
     """General-purpose contract for retrieving data from the API."""
+
     query_on: QueryOn
     count_what: CountWhat
     group_what: GroupWhat
@@ -33,13 +37,17 @@ class DataRequestContract:
         return DataRequestSchema()
 
     @staticmethod
-    def load(data: dict) -> 'DataRequestContract':
+    def load(data: dict) -> "DataRequestContract":
         return DataRequestContract.get_schema().load(data)
 
     def to_query(self) -> Query:
         return Query(
-            self.query_on, self.count_what, self.group_what,
-            self.resolution, self.start_date, self.end_date
+            self.query_on,
+            self.count_what,
+            self.group_what,
+            self.resolution,
+            self.start_date,
+            self.end_date,
         )
 
 
@@ -54,7 +62,7 @@ class DataRequestSchema(msh.Schema):
 
     class Meta:
         # Define date format
-        dateformat = '%m-%d-%Y'
+        dateformat = "%m-%d-%Y"
 
     @msh.post_load
     def make_contract(self, data, **kwargs) -> DataRequestContract:

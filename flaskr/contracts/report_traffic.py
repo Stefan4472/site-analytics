@@ -11,9 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import marshmallow as msh
 import dataclasses as dc
 import datetime as dt
+
+import marshmallow as msh
 
 
 @dc.dataclass
@@ -28,7 +29,7 @@ class ReportTrafficContract:
         return ReportTrafficSchema()
 
     @staticmethod
-    def load(data: dict) -> 'ReportTrafficContract':
+    def load(data: dict) -> "ReportTrafficContract":
         return ReportTrafficContract.get_schema().load(data)
 
 
