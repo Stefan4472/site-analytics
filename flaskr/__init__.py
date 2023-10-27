@@ -55,8 +55,6 @@ def create_app(test_config: SiteConfig = None):
     # Register click commands.
     app.cli.add_command(cli.init_db_command)
     app.cli.add_command(cli.reset_db_command)
-    app.cli.add_command(cli.run_import_command)
     app.cli.add_command(cli.process_data)
-    app.cli.add_command(cli.debug_noodling)
 
     return app

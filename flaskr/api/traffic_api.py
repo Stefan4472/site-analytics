@@ -18,8 +18,6 @@ from flask_login import login_required
 from flaskr import db
 from flaskr.contracts.report_traffic import ReportTrafficContract
 from flaskr.models.raw_view import RawView
-from flaskr.models.user import User
-from flaskr.models.view import View
 
 blueprint = Blueprint("traffic", __name__, url_prefix="/api/v1/traffic")
 
@@ -33,11 +31,6 @@ def report_traffic():
         return Response(status=200)
     except marshmallow.exceptions.ValidationError as e:
         return Response(status=400, response="Invalid parameters: {}".format(e))
-
-
-def get_or_create_user(ip_address: str) -> User:
-    existing_user = User.query.filter_by(ip_address=ip_address).first()
-    return existing_user if existing_user else User(ip_address=ip_address)
 
 
 # TODO: needs a better name

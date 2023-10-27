@@ -22,7 +22,7 @@ import flaskr.api.traffic_api as traffic_api
 from flaskr.contracts.report_traffic import ReportTrafficContract
 from flaskr.database import db
 from flaskr.models.raw_view import RawView
-from flaskr.models.user import User
+from flaskr.processing.view_processor import ViewProcessor
 
 """Flask CLI commands."""
 
@@ -51,158 +51,12 @@ def reset_db_command():
 @with_appcontext
 def process_data():
     current_app.logger.info("Running data processing")
-    for user in User.query.filter_by(was_processed=False):
-        try:
-            current_app.logger.info(f"Processing User {user.id}")
-            user.process()
-            db.session.commit()  # TODO: move this out of the loop once we're sure it doesn't fail
-        except ValueError as e:
-            current_app.logger.error(f"Failure processing user {user.id}: {e}")
-        # Sleep to avoid exceeding the Geo-IP API rate limit
-        time.sleep(1)
-
-
-# TODO: remove
-@click.command("debug-noodling")
-@with_appcontext
-def debug_noodling():
-    import datetime as dt
-
-    from flaskr.processing.query_runner import (CountWhat, GroupWhat, Query,
-                                                QueryOn, QueryResolution,
-                                                QueryResult, QueryRunner)
-
-    start = dt.datetime(2020, 4, 1)
-    end = dt.datetime(2022, 5, 1)
-
-    print(
-        QueryRunner.run_query(
-            Query(
-                QueryOn.Bots,
-                CountWhat.Users,
-                GroupWhat.Country,
-                QueryResolution.All,
-                start,
-                end,
-            ),
-            db.session,
-        )
-    )
-    print(
-        QueryRunner.run_query(
-            Query(
-                QueryOn.Bots,
-                CountWhat.Users,
-                GroupWhat.Country,
-                QueryResolution.Day,
-                start,
-                end,
-            ),
-            db.session,
-        )
-    )
-    print(
-        QueryRunner.run_query(
-            Query(
-                QueryOn.Bots,
-                CountWhat.Users,
-                GroupWhat.Country,
-                QueryResolution.Week,
-                start,
-                end,
-            ),
-            db.session,
-        )
-    )
-    print(
-        QueryRunner.run_query(
-            Query(
-                QueryOn.Bots,
-                CountWhat.Users,
-                GroupWhat.Country,
-                QueryResolution.Month,
-                start,
-                end,
-            ),
-            db.session,
-        )
-    )
-    print(
-        QueryRunner.run_query(
-            Query(
-                QueryOn.Bots,
-                CountWhat.Users,
-                GroupWhat.Country,
-                QueryResolution.Year,
-                start,
-                end,
-            ),
-            db.session,
-        )
-    )
-
-    print(
-        QueryRunner.run_query(
-            Query(
-                QueryOn.Bots,
-                CountWhat.Views,
-                GroupWhat.Country,
-                QueryResolution.Day,
-                start,
-                end,
-            ),
-            db.session,
-        )
-    )
-    print(
-        QueryRunner.run_query(
-            Query(
-                QueryOn.Bots,
-                CountWhat.Views,
-                GroupWhat.Country,
-                QueryResolution.Week,
-                start,
-                end,
-            ),
-            db.session,
-        )
-    )
-    print(
-        QueryRunner.run_query(
-            Query(
-                QueryOn.Bots,
-                CountWhat.Views,
-                GroupWhat.Country,
-                QueryResolution.Month,
-                start,
-                end,
-            ),
-            db.session,
-        )
-    )
-    print(
-        QueryRunner.run_query(
-            Query(
-                QueryOn.Bots,
-                CountWhat.Views,
-                GroupWhat.Country,
-                QueryResolution.Year,
-                start,
-                end,
-            ),
-            db.session,
-        )
-    )
-    print(
-        QueryRunner.run_query(
-            Query(
-                QueryOn.Bots,
-                CountWhat.Views,
-                GroupWhat.Country,
-                QueryResolution.All,
-                start,
-                end,
-            ),
-            db.session,
-        )
-    )
+    view_processor = ViewProcessor()
+    num_processed = 0
+    for raw_view in RawView.query.filter_by(process_timestamp=None):
+        processed = view_processor.process_view(raw_view)
+        raw_view.process_timestamp = processed.process_timestamp
+        db.session.add(processed)
+        num_processed += 1
+    db.session.commit()
+    click.echo(f"Processed {num_processed} records.")

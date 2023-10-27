@@ -12,48 +12,55 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import socket
-import typing
+from dataclasses import dataclass
+from typing import Optional
 
-# TODO: NARROW THE LIST? SEE HOW WELL THE "REQUESTS-PER-SECOND" METRIC WORKS
-BOT_KEYWORDS = [
-    "bot",
-    "scan",
-    "surf",
-    "spider",
-    "crawl",
-    "pool",
-    "ip189",
-    "amazon",
-    "google",
-    "bezeqint",
-    "greenhousedata",
-    "comcastbusiness",
-    "dataprovider",
-]
+from flask import current_app
+
+# BOT_KEYWORDS = [
+#     "bot",
+#     "scan",
+#     "surf",
+#     "spider",
+#     "crawl",
+#     "pool",
+#     "ip189",
+#     "amazon",
+#     "google",
+#     "bezeqint",
+#     "greenhousedata",
+#     "comcastbusiness",
+#     "dataprovider",
+# ]
 
 
-def lookup_hostname(ip_address: str) -> str:
+@dataclass
+class HostnameInfo:
+    hostname: str
+    domain: str
+
+
+def lookup_hostname(ip_address: str) -> Optional[HostnameInfo]:
     try:
         hostname = socket.gethostbyaddr(ip_address)[0]
     except (socket.herror, socket.gaierror):
-        raise ValueError("Socket error")
+        current_app.logger.warning("Socket error.")
+        return None
 
     # For the rare case that 'hostname' = Nan
     if isinstance(hostname, float):
-        raise ValueError("hostname = Nan")
+        current_app.logger.warning("hostname = Nan")
+        return None
 
-    return hostname
-
-
-def domain_from_hostname(hostname) -> typing.Optional[str]:
-    if not hostname or "." not in hostname:
-        return hostname
     segments = hostname.split(".")
-    return segments[-2] + "." + segments[-1]
+    domain = segments[-2] + "." + segments[-1] if len(segments) > 1 else hostname
+    return HostnameInfo(hostname, domain)
 
 
-def is_bot(hostname: str) -> bool:
-    # If the hostname couldn't be resolved, we can't assume it's a bot
-    if not hostname:
-        return False
-    return any(k in hostname.lower() for k in BOT_KEYWORDS)
+#
+#
+# def is_bot(hostname: str) -> bool:
+#     # If the hostname couldn't be resolved, we can't assume it's a bot
+#     if not hostname:
+#         return False
+#     return any(k in hostname.lower() for k in BOT_KEYWORDS)
