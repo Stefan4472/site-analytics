@@ -20,8 +20,7 @@ from user_agents.parsers import UserAgent
 
 from flaskr.models.processed_view import ProcessedView
 from flaskr.models.raw_view import RawView
-from flaskr.processing.hostname import HostnameInfo, lookup_hostname
-from flaskr.processing.location import Location, lookup_location
+from flaskr.processing.ip_lookup import IpAddressInfo, lookup_ip_address
 
 
 class ViewProcessor:
@@ -30,19 +29,14 @@ class ViewProcessor:
     """
 
     def __init__(self):
-        self._location_cache = pylru.lrucache(512)
-        self._hostname_cache = pylru.lrucache(512)
+        self._ip_cache = pylru.lrucache(512)
         # ip-api is limited to 45 requests per minute.
-        self._location_throttler = ratelimiter.RateLimiter(45, 60)
-        # Limit hostname lookups to 1QPS.
-        self._hostname_throttler = ratelimiter.RateLimiter(1)
+        self._lookup_throttler = ratelimiter.RateLimiter(45, 60)
 
     def process_view(self, raw_view: RawView) -> ProcessedView:
         user_agent = user_agents.parse(raw_view.user_agent)
-        location = self._get_location(raw_view.ip_address)
+        location = self._lookup_ip(raw_view.ip_address)
         is_bot = self._is_bot(user_agent)
-        # TODO: I'm not sure if the hostname really brings us much.
-        hostname = self._get_hostname(raw_view.ip_address) if is_bot else None
         return ProcessedView(
             url=raw_view.url,
             ip_address=raw_view.ip_address,
@@ -50,8 +44,8 @@ class ViewProcessor:
             timestamp=raw_view.timestamp,
             process_timestamp=datetime.now(),
             is_bot=is_bot,
-            hostname=hostname.hostname if hostname else None,
-            domain=hostname.domain if hostname else None,
+            hostname=location.hostname if location else None,
+            domain=location.domain if location else None,
             country=location.country if location else None,
             region=location.region if location else None,
             city=location.city if location else None,
@@ -69,35 +63,20 @@ class ViewProcessor:
             device_type=self._device_type(user_agent),
         )
 
-    def _get_location(self, ip_address: str) -> Location:
+    def _lookup_ip(self, ip_address: str) -> IpAddressInfo:
         """
         Returns location information for the specified IP address.
 
         Internally makes a request to an external API. Uses an LRU cache to
         reduce API calls and respects the location QPS limit.
         """
-        lookup = self._location_cache.get(ip_address, None)
+        lookup = self._ip_cache.get(ip_address, None)
         if lookup:
             return lookup
-        with self._location_throttler:
-            location = lookup_location(ip_address)
-            self._location_cache[ip_address] = location
-            return location
-
-    def _get_hostname(self, ip_address: str) -> HostnameInfo:
-        """
-        Returns hostname information for the specified IP address.
-
-        Internally makes a request to an external API. Uses an LRU cache to
-        reduce API calls and respects the location QPS limit.
-        """
-        lookup = self._hostname_cache.get(ip_address, None)
-        if lookup:
-            return lookup
-        with self._hostname_throttler:
-            hostname = lookup_hostname(ip_address)
-            self._hostname_cache[ip_address] = hostname
-            return hostname
+        with self._lookup_throttler:
+            ip_info = lookup_ip_address(ip_address)
+            self._ip_cache[ip_address] = ip_info
+            return ip_info
 
     @staticmethod
     def _is_bot(user_agent: UserAgent) -> bool:

@@ -37,14 +37,8 @@ class ProcessedView(db.Model):
 
     # Whether the requester was classified as being a bot.
     is_bot = db.Column(db.Boolean)
-    # Hostname of the IP address used by the requestor.
-    # Only populated if `is_bot=True`.
-    hostname = db.Column(db.String, nullable=True)
-    # Domain of the requestor's hostname.
-    # Only populated if `is_bot=True`.
-    domain = db.Column(db.String, nullable=True)
 
-    # Location information derived from the IP address of the requstor.
+    # Information derived from the IP address of the requestor.
     # Fields may be null if they could not be determined.
     country = db.Column(db.String, nullable=True)
     region = db.Column(db.String, nullable=True)
@@ -54,6 +48,10 @@ class ProcessedView(db.Model):
     lon = db.Column(db.String, nullable=True)
     isp = db.Column(db.String, nullable=True)
     org = db.Column(db.String, nullable=True)
+    # Hostname of the IP address used by the requestor.
+    hostname = db.Column(db.String, nullable=True)
+    # Domain extracted from the requestor's hostname.
+    domain = db.Column(db.String, nullable=True)
 
     # Device information derived from the user agent of the requestor.
     # Fields may be null if they could not be determined.

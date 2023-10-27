@@ -12,12 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import dataclasses as dc
+from typing import Optional
 
 import requests
 
 
 @dc.dataclass
-class Location:
+class IpAddressInfo:
     """Stores data retrieved from the ip-api for a single IP address."""
 
     country: str = None
@@ -28,18 +29,37 @@ class Location:
     lon: str = None
     isp: str = None
     org: str = None
+    # Hostname derived via reverse DNS lookup.
+    hostname: str = None
+    # Domain extracted from the hostname.
+    domain: str = None
 
 
-def lookup_location(ip_address: str) -> Location:
-    """Queries the ip-api API and returns information received for the given IP address."""
+def get_domain(hostname: str) -> Optional[str]:
+    """Extracts the domain from a hostname."""
+    hostname_segments = hostname.split(".")
+    return (
+        hostname_segments[-2] + "." + hostname_segments[-1]
+        if len(hostname_segments) > 1
+        else None
+    )
+
+
+def lookup_ip_address(ip_address: str) -> IpAddressInfo:
+    """
+    Queries the ip-api API and returns information received for the given IP address.
+
+    It is the responsibility of the caller to ensure that rate limits are adhered to.
+    Throws ValueError if the request fails.
+    """
     # See https://ip-api.com/docs/api:json.
-    response = requests.get(f"http://ip-api.com/json/{ip_address}?fields=59129")
+    response = requests.get(f"http://ip-api.com/json/{ip_address}?fields=63225")
     response_json = response.json()
     if response.status_code != 200 or response_json["status"] != "success":
         raise ValueError(
             f'Request failed with status {response.status_code}: {response_json["message"]}'
         )
-    return Location(
+    return IpAddressInfo(
         country=response_json.get("country", None),
         region=response_json.get("regionName", None),
         city=response_json.get("city", None),
@@ -48,4 +68,6 @@ def lookup_location(ip_address: str) -> Location:
         lon=response_json.get("lon", None),
         isp=response_json.get("isp", None),
         org=response_json.get("org", None),
+        hostname=response_json.get("reverse", None),
+        domain=get_domain(response_json.get("reverse", "")),
     )
