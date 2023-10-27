@@ -13,7 +13,6 @@
 # limitations under the License.
 import pathlib
 import time
-from datetime import datetime
 
 import click
 from flask import current_app
@@ -46,33 +45,6 @@ def reset_db_command():
     db.drop_all()
     db.create_all()
     current_app.logger.info("Reset the database.")
-
-
-@click.command("run-import")
-@click.argument(
-    "logfile",
-    type=click.Path(
-        exists=True, dir_okay=False, file_okay=True, path_type=pathlib.Path
-    ),
-)
-@with_appcontext
-def run_import_command(logfile: pathlib.Path):
-    """For temporary development usage only!"""
-    current_app.logger.info(f"Running import on logfile {logfile.absolute()}")
-    with open(logfile) as f:
-        for line in f:
-            first_comma = line.index(",")
-            second_comma = line.index(",", first_comma + 1)
-            third_comma = line.index(",", second_comma + 1)
-
-            timestamp = line[:first_comma]
-            request_time = datetime.strptime(timestamp, "%m-%d-%Y-%H:%M:%S:%f")
-            url = line[first_comma + 1 : second_comma]
-            ip = line[second_comma + 1 : third_comma]
-            user_agent = line[third_comma + 1 :]
-
-            contract = ReportTrafficContract(url, ip, user_agent, request_time)
-            traffic_api.store_traffic(contract)
 
 
 @click.command("process-data")
