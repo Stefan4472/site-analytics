@@ -18,31 +18,34 @@ import requests
 
 @dc.dataclass
 class Location:
-    country_name: str = None
+    """Stores data retrieved from the ip-api for a single IP address."""
+
+    country: str = None
+    region: str = None
     city: str = None
-    region_name: str = None
+    zip: str = None
+    lat: str = None
+    lon: str = None
+    isp: str = None
+    org: str = None
 
 
-# Used for accessing the `freegeoip` API
-LOCATION_API_URL = "https://freegeoip.app/json/"
-LOCATION_API_HEADERS = {
-    "accept": "application/json",
-    "content-type": "application/json",
-}
-
-
-def lookup_location(ip_addr: str) -> Location:
-    """Query the FreeGeoIP API."""
-    response = requests.request(
-        "GET",
-        LOCATION_API_URL + ip_addr,
-        headers=LOCATION_API_HEADERS,
-    )
-    if response.status_code == 200:
-        return Location(
-            country_name=response.json().get("country_name"),
-            city=response.json().get("city"),
-            region_name=response.json().get("region_name"),
+def lookup_location(ip_address: str) -> Location:
+    """Queries the ip-api API and returns information received for the given IP address."""
+    # See https://ip-api.com/docs/api:json.
+    response = requests.get(f"http://ip-api.com/json/{ip_address}?fields=59129")
+    response_json = response.json()
+    if response.status_code != 200 or response_json["status"] != "success":
+        raise ValueError(
+            f'Request failed with status {response.status_code}: {response_json["message"]}'
         )
-    else:
-        raise ValueError(response.text)
+    return Location(
+        country=response_json.get("country", None),
+        region=response_json.get("regionName", None),
+        city=response_json.get("city", None),
+        zip=response_json.get("zip", None),
+        lat=response_json.get("lat", None),
+        lon=response_json.get("lon", None),
+        isp=response_json.get("isp", None),
+        org=response_json.get("org", None),
+    )

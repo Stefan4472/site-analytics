@@ -54,6 +54,7 @@ def process_data():
     view_processor = ViewProcessor()
     num_processed = 0
     for raw_view in RawView.query.filter_by(process_timestamp=None):
+        current_app.logger.debug(f"Processing id={raw_view.id}.")
         processed = view_processor.process_view(raw_view)
         raw_view.process_timestamp = processed.process_timestamp
         db.session.add(processed)

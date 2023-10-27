@@ -29,16 +29,19 @@ class ViewProcessor:
     Processes RawViews, deriving information from the IP address and user agent.
     """
 
-    def __init__(self, max_location_qps: int = 1, max_hostname_qps: int = 1):
+    def __init__(self):
         self._location_cache = pylru.lrucache(512)
         self._hostname_cache = pylru.lrucache(512)
-        self._location_throttler = ratelimiter.RateLimiter(max_location_qps)
-        self._hostname_throttler = ratelimiter.RateLimiter(max_hostname_qps)
+        # ip-api is limited to 45 requests per minute.
+        self._location_throttler = ratelimiter.RateLimiter(45, 60)
+        # Limit hostname lookups to 1QPS.
+        self._hostname_throttler = ratelimiter.RateLimiter(1)
 
     def process_view(self, raw_view: RawView) -> ProcessedView:
         user_agent = user_agents.parse(raw_view.user_agent)
         location = self._get_location(raw_view.ip_address)
         is_bot = self._is_bot(user_agent)
+        # TODO: I'm not sure if the hostname really brings us much.
         hostname = self._get_hostname(raw_view.ip_address) if is_bot else None
         return ProcessedView(
             url=raw_view.url,
@@ -49,9 +52,14 @@ class ViewProcessor:
             is_bot=is_bot,
             hostname=hostname.hostname if hostname else None,
             domain=hostname.domain if hostname else None,
+            country=location.country if location else None,
+            region=location.region if location else None,
             city=location.city if location else None,
-            region=location.region_name if location else None,
-            country=location.country_name if location else None,
+            zip=location.zip if location else None,
+            lat=location.lat if location else None,
+            lon=location.lon if location else None,
+            isp=location.isp if location else None,
+            org=location.org if location else None,
             operating_system_family=user_agent.os.family,
             operating_system_version=user_agent.os.version_string,
             browser_family=user_agent.browser.family,
