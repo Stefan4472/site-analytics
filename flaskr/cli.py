@@ -22,6 +22,7 @@ from flask.cli import with_appcontext
 import flaskr.api.traffic_api as traffic_api
 from flaskr.contracts.report_traffic import ReportTrafficContract
 from flaskr.database import db
+from flaskr.models.raw_view import RawView
 from flaskr.models.user import User
 
 """Flask CLI commands."""

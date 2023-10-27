@@ -17,13 +17,9 @@ from flask_login import login_required
 
 from flaskr import db
 from flaskr.contracts.report_traffic import ReportTrafficContract
+from flaskr.models.raw_view import RawView
 from flaskr.models.user import User
 from flaskr.models.view import View
-
-# TODO: SEND A 'WEEKLY REPORT' EMAIL?
-# Note: Users are uniquely defined by their IP address.
-# TODO: DEFINE BY (IP_ADDRESS, USER_AGENT)?
-
 
 blueprint = Blueprint("traffic", __name__, url_prefix="/api/v1/traffic")
 
@@ -44,18 +40,22 @@ def get_or_create_user(ip_address: str) -> User:
     return existing_user if existing_user else User(ip_address=ip_address)
 
 
+# TODO: needs a better name
 def store_traffic(contract: ReportTrafficContract):
     contract.user_agent = contract.user_agent.strip()
-    # Write to log
+    # Write to log.
+    # TODO: use proper CSV library. Also, create a new file each day or every x records.
     with open(current_app.config["LOG_PATH"], "a") as log_file:
         log_file.write(
             f"{contract.timestamp},{contract.url},{contract.ip_address},{contract.user_agent}\n"
         )
 
-    # Add to database. SQL-Alchemy will escape strings before processing them.
-    user = get_or_create_user(contract.ip_address)
-    view = View(contract.url, contract.user_agent, contract.timestamp)
-    db.session.add(user)
-    db.session.add(view)
-    user.my_views.append(view)
+    db.session.add(
+        RawView(
+            url=contract.url.strip(),
+            ip_address=contract.ip_address.strip(),
+            user_agent=contract.user_agent.strip(),
+            timestamp=contract.timestamp,
+        )
+    )
     db.session.commit()

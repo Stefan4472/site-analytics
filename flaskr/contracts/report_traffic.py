@@ -37,7 +37,8 @@ class ReportTrafficSchema(msh.Schema):
     url = msh.fields.Str(required=True, allow_none=False)
     ip_address = msh.fields.Str(required=True, allow_none=False)
     user_agent = msh.fields.Str(required=True, allow_none=False)
-    timestamp = msh.fields.DateTime(required=True, allow_none=False)
+    # ISO-format timestamp string.
+    timestamp = msh.fields.DateTime(required=True, format="iso", allow_none=False)
 
     @msh.post_load
     def make_contract(self, data, **kwargs) -> ReportTrafficContract:
