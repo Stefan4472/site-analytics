@@ -17,7 +17,7 @@ from datetime import datetime
 import marshmallow as msh
 import marshmallow_enum as msh_enum
 
-from flaskr.processing.query_runner import (Filter, GroupBy, Query)
+from flaskr.processing.query_runner import Filter, GroupBy, Query
 
 
 @dataclass
@@ -27,7 +27,7 @@ class QueryContract:
     start_time: datetime
     end_time: datetime
     time_bucket: int
-    # group_by: GroupBy
+    group_by: GroupBy
     # filter_by: Filter
 
     @staticmethod
@@ -43,15 +43,18 @@ class QueryContract:
             self.start_time,
             self.end_time,
             self.time_bucket,
+            self.group_by,
         )
 
 
 class QuerySchema(msh.Schema):
     """Marshmallow schema used to parse a `QueryContract`."""
+
     start_time = msh.fields.DateTime(required=True, allow_none=False)
     end_time = msh.fields.DateTime(required=True, allow_none=False)
-    time_bucket: msh.fields.Int(required=True, allow_none=False)
+    # time_bucket: msh.fields.Int(required=True, allow_none=False)
+    group_by = msh_enum.EnumField(GroupBy, required=True, allow_none=False)
 
     @msh.post_load
     def make_contract(self, data, **kwargs) -> QueryContract:
-        return QueryContract(**data)
+        return QueryContract(**data, time_bucket=86440)

@@ -11,8 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from dataclasses import dataclass, field
 from collections import defaultdict
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import List
@@ -56,7 +56,7 @@ class Query:
     start_time: datetime
     end_time: datetime
     time_bucket: int
-    # group_by: GroupBy TODO
+    group_by: GroupBy
     # filter: Filter TODO
 
 
@@ -83,29 +83,33 @@ class Bucket:
 #     # Build the WHERE clause
 #     return ''
 #
-# def get_column_name(self) -> Optional[str]:
-#     if self == GroupWhat.Nothing:
-#         return None
-#     elif self == GroupWhat.Country:
-#         return "users.country"
-#     elif self == GroupWhat.City:
-#         return "users.city"
-#     elif self == GroupWhat.Region:
-#         return "users.region"
-#     elif self == GroupWhat.Url:
-#         return "views.url"
-#     elif self == GroupWhat.Domain:
-#         return "users.domain"
-#     elif self == GroupWhat.OperatingSystem:
-#         return "views.operating_system"
-#     elif self == GroupWhat.Device:
-#         return "views.device"
-#     elif self == GroupWhat.DeviceType:
-#         return "views.device_type"
-#     elif self == GroupWhat.Browser:
-#         return "views.browser"
-#     else:
-#         raise ValueError("Not implemented")
+
+
+def make_select(query: Query) -> str:
+    first_term: str
+    if query.group_by == GroupBy.Unset:
+        first_term = "'None'"
+    elif query.group_by == GroupBy.Country:
+        first_term = "country"
+    elif query.group_by == GroupBy.City:
+        first_term = "city"
+    elif query.group_by == GroupBy.Region:
+        first_term = "region"
+    elif query.group_by == GroupBy.Url:
+        first_term = "url"
+    elif query.group_by == GroupBy.Domain:
+        first_term = "domain"
+    elif query.group_by == GroupBy.OperatingSystem:
+        first_term = "operating_system"
+    elif query.group_by == GroupBy.Device:
+        first_term = "device"
+    elif query.group_by == GroupBy.DeviceType:
+        first_term = "device_type"
+    elif query.group_by == GroupBy.Browser:
+        first_term = "browser"
+    else:
+        raise ValueError("Not implemented")
+    return first_term + ", timestamp"
 
 
 def run_query(
@@ -166,7 +170,7 @@ def run_query(
     # Create and execute the query. We don't need to perform any GROUP BY
     # or SORT within the query, as we will handle that using our buckets.
     sql = sqla.text(
-        "SELECT timestamp "
+        f"SELECT {make_select(query)} "
         "FROM processed_view "
         "WHERE timestamp >= :start_time AND timestamp <= :end_time"
     )
@@ -178,10 +182,11 @@ def run_query(
 
     # Put data into buckets.
     for r in result.all():
-        timestamp = datetime.fromisoformat(r[0])
+        key = r[0]
+        timestamp = datetime.fromisoformat(r[1])
         bucket_index = int(
             (timestamp - query.start_time).total_seconds() / query.time_bucket
         )
-        buckets[bucket_index].data["count"] += 1
+        buckets[bucket_index].data[key] += 1
 
     return buckets
