@@ -11,244 +11,177 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import dataclasses as dc
-import datetime as dt
+from dataclasses import dataclass, field
+from collections import defaultdict
+from datetime import datetime, timedelta
 from enum import Enum
-from typing import List, Optional
+from typing import List
 
 import sqlalchemy as sqla
 import sqlalchemy.engine
 
-import flaskr.processing.util as util
+# The maximum number of buckets allowed for query processing.
+# This is configured to avoid overworking the system.
+MAX_NUM_BUCKETS = 1000
 
 
-class QueryOn(Enum):
-    People = "People"
-    Bots = "Bots"
+class GroupBy(Enum):
+    """The possible data columns that a query can aggregate on."""
+
+    Unset = "UNSET"
+    Country = "COUNTRY"
+    City = "CITY"
+    Region = "REGION"
+    Url = "URL"
+    Domain = "DOMAIN"
+    OperatingSystem = "OPERATING_SYSTEM"
+    Device = "DEVICE"
+    DeviceType = "DEVICE_TYPE"
+    Browser = "BROWSER"
+    BrowserFamily = "BROWSER_FAMILY"
 
 
-class CountWhat(Enum):
-    Views = "Views"
-    Users = "Users"
+class Filter(Enum):
+    """Possible filters that can be applied to the query results."""
+
+    Unset = "UNSET"
+    Humans = "HUMANS"
+    Bots = "BOTS"
 
 
-class GroupWhat(Enum):
-    Nothing = "Nothing"
-    Country = "Country"
-    City = "City"
-    Region = "Region"
-    Url = "Url"
-    Domain = "Domain"
-    OperatingSystem = "OperatingSystem"
-    Device = "Device"
-    DeviceType = "DeviceType"
-    Browser = "Browser"
-
-    def get_column_name(self) -> Optional[str]:
-        if self == GroupWhat.Nothing:
-            return None
-        elif self == GroupWhat.Country:
-            return "users.country"
-        elif self == GroupWhat.City:
-            return "users.city"
-        elif self == GroupWhat.Region:
-            return "users.region"
-        elif self == GroupWhat.Url:
-            return "views.url"
-        elif self == GroupWhat.Domain:
-            return "users.domain"
-        elif self == GroupWhat.OperatingSystem:
-            return "views.operating_system"
-        elif self == GroupWhat.Device:
-            return "views.device"
-        elif self == GroupWhat.DeviceType:
-            return "views.device_type"
-        elif self == GroupWhat.Browser:
-            return "views.browser"
-        else:
-            raise ValueError("Not implemented")
-
-
-class QueryResolution(Enum):
-    All = "All"  # No resolution into Days/Weeks/Months etc.
-    Day = "Day"
-    Week = "Week"
-    Month = "Month"
-    Year = "Year"
-
-
-@dc.dataclass
+@dataclass
 class Query:
-    query_on: QueryOn
-    count_what: CountWhat
-    group_what: GroupWhat
-    resolution: QueryResolution
-    # Dates default to MIN and MAX, giving you the ALL TIME results
-    start_date: dt.date = None
-    end_date: dt.date = None
+    """Defines a query to run over the ProcessedViews."""
+
+    start_time: datetime
+    end_time: datetime
+    time_bucket: int
+    # group_by: GroupBy TODO
+    # filter: Filter TODO
 
 
-@dc.dataclass
-class QueryResult:
-    quantity: int
-    date: dt.datetime = None
-    key: str = None
+# TODO: pretty sure this copies the data when serializing to JSON.
+# Would be good to just "natively" have it in the JSON dict.
+@dataclass
+class Bucket:
+    """Stores query results from a single "bucket" of time."""
 
+    # Timestamp at which the bucket starts.
+    timestamp: datetime
+    # Data stored for this bucket, keyed by the "group_by" of the query.
+    data: defaultdict[str, int] = field(default_factory=lambda: defaultdict(int))
 
-class QueryRunner:
-    """
-    Dynamically generate and execute queries.
-
-    This is pretty complicated, but it's the only feasible way to cover
-    all TimePeriod * Selection combinations. I don't know if this will
-    be the way-to-go long term, because it makes schema changes tough.
-
-    See `test_query_runner.py` for examples of queries and generated SQL.
-    """
-
-    @staticmethod
-    def run_query(
-        query: Query,
-        session: "sqlalchemy.orm.scoping.scoped_session",
-    ) -> List[QueryResult]:
-        sql = sqla.text(QueryRunner._generate_sql(query))
-        params = {
-            "is_bot": query.query_on == QueryOn.Bots,
-            "start": query.start_date if query.start_date else dt.date.min,
-            "end": query.end_date if query.end_date else dt.date.max,
+    def json(self) -> dict:
+        """Serialize this bucket to a JSON object."""
+        return {
+            "timestamp": self.timestamp.isoformat(),
+            "data": self.data,
         }
-        result = session.execute(sql, params)
-        return QueryRunner._make_results(query, result)
 
-    @staticmethod
-    def _generate_sql(query: Query) -> str:
-        """
-        Dynamically generate SQL for the given query.
 
-        This is a little hairy. I've done my best to make it readable.
-        There are still some logic simplifications that could be done in the
-        GROUP BY section.
-        """
-        if query.count_what == CountWhat.Users:
-            query_string = "SELECT COUNT(DISTINCT users.id) AS cnt"
-        else:
-            query_string = "SELECT COUNT(*) AS cnt"
+# def build_filter(self, start_time, end_time, filter_):
+#     # Build the WHERE clause
+#     return ''
+#
+# def get_column_name(self) -> Optional[str]:
+#     if self == GroupWhat.Nothing:
+#         return None
+#     elif self == GroupWhat.Country:
+#         return "users.country"
+#     elif self == GroupWhat.City:
+#         return "users.city"
+#     elif self == GroupWhat.Region:
+#         return "users.region"
+#     elif self == GroupWhat.Url:
+#         return "views.url"
+#     elif self == GroupWhat.Domain:
+#         return "users.domain"
+#     elif self == GroupWhat.OperatingSystem:
+#         return "views.operating_system"
+#     elif self == GroupWhat.Device:
+#         return "views.device"
+#     elif self == GroupWhat.DeviceType:
+#         return "views.device_type"
+#     elif self == GroupWhat.Browser:
+#         return "views.browser"
+#     else:
+#         raise ValueError("Not implemented")
 
-        # Select specified "QueryWhat" column
-        if query.group_what != GroupWhat.Nothing:
-            query_string += ", " + query.group_what.get_column_name()
 
-        # Select date values for "QueryResolution" (if resolution != AllTime)
-        if query.resolution == QueryResolution.Day:
-            query_string += ", EXTRACT(YEAR FROM views.timestamp) AS year, EXTRACT(DOY FROM views.timestamp) AS day"
-        elif query.resolution == QueryResolution.Week:
-            # Note: here we need to extract ISOYEAR, not YEAR, because the WEEK
-            # crosses over YEAR boundaries, e.g. the last week of December.
-            # Using YEAR alone causes a bug where the year and week don't match up.
-            query_string += ", EXTRACT(ISOYEAR FROM views.timestamp) AS year, EXTRACT(WEEK FROM views.timestamp) AS week"
-        elif query.resolution == QueryResolution.Month:
-            query_string += ", EXTRACT(YEAR FROM views.timestamp) AS year, EXTRACT(MONTH FROM views.timestamp) AS month"
-        elif query.resolution == QueryResolution.Year:
-            query_string += ", EXTRACT(YEAR FROM views.timestamp) AS year"
+def run_query(
+    session: "sqlalchemy.orm.scoping.scoped_session", query: Query
+) -> List[Bucket]:
+    """
+    Dynamically generate and execute queries over the `processed_view`
+    table.
 
-        query_string += (
-            " FROM users JOIN views ON views.user_id = users.id "
-            "WHERE views.timestamp > :start AND views.timestamp < :end "
-            "AND users.is_bot = :is_bot"
+    Here's how queries work: we have a `start_time` and an `end_time`.
+    The query will only process data within [start_time, end_time).
+
+    Then we define the "time buckets" that we want to aggregate the
+    data over. Time buckets are defined as a number of seconds.
+    For example, setting a bucket of 3600 seconds will give you data
+    aggregated for each hour between `start_time` and `end_time`.
+
+    Then we can define an optional "group by" that we want to further
+    aggregate the data over *within* the buckets. This is essentially
+    choosing a column from the `processed_view` that we want to count,
+    e.g. `country` or `domain`.
+
+    Finally we can specify a filter. Only data that matches the filter
+    will be processed. For example, we can specify that we only want
+    to process data for bots.
+
+    An example: "Give me the number of views per day originating
+    from human users between January 1st, 2023 and January 1st, 2024,
+    and furthermore break it down by country of the user."
+    Can be represented as the following query:
+
+    Query(
+      start_time=datetime(2023, 1, 1),
+      end_time=datetime(2024, 1, 1),
+      bucket_sec=60*60*24,
+      group_by=GroupBy.Country,
+      filter=Filter.Humans,
+    )
+
+    TODO: how to support bucketing by calendar month? -> time_bucket could also be allowed to be a string, e.g. MONTH.
+    """
+    num_buckets = int(
+        (query.end_time - query.start_time).total_seconds() / query.time_bucket
+    )
+    if num_buckets > MAX_NUM_BUCKETS:
+        raise ValueError(
+            f"Too many buckets: the limit is {MAX_NUM_BUCKETS} but the query requested {num_buckets}. query={query}"
         )
 
-        # Assemble GROUP BY (unless resolution == AllTime and QueryWhat == Nothing)
-        if not (
-            query.resolution == QueryResolution.All
-            and query.group_what == GroupWhat.Nothing
-        ):
-            query_string += " GROUP BY "
-            if query.resolution == QueryResolution.All:
-                # No dates involved: just GROUP BY the selected column
-                query_string += query.group_what.get_column_name()
-            else:
-                # GROUP BY date first
-                if query.resolution == QueryResolution.Day:
-                    query_string += "year, day"
-                elif query.resolution == QueryResolution.Week:
-                    query_string += "year, week"
-                elif query.resolution == QueryResolution.Month:
-                    query_string += "year, month"
-                elif query.resolution == QueryResolution.Year:
-                    query_string += "year"
-                # Then GROUP BY selected column
-                if query.group_what != GroupWhat.Nothing:
-                    query_string += ", " + query.group_what.get_column_name()
+    # Initialize the buckets.
+    buckets = []
+    curr_time = query.start_time
+    for _ in range(num_buckets):
+        buckets.append(Bucket(curr_time))
+        curr_time += timedelta(seconds=query.time_bucket)
 
-        query_string += " ORDER BY "
-        # ORDER BY date if resolution != AllTime
-        if query.resolution == QueryResolution.Day:
-            query_string += "year, day, "
-        elif query.resolution == QueryResolution.Week:
-            query_string += "year, week, "
-        elif query.resolution == QueryResolution.Month:
-            query_string += "year, month, "
-        elif query.resolution == QueryResolution.Year:
-            query_string += "year, "
-        # Then order by "QueryWhat" column
-        if query.group_what == GroupWhat.Nothing:
-            query_string += "cnt"
-        else:
-            query_string += query.group_what.get_column_name()
+    # TODO: SELECT clause and filter
+    # Create and execute the query. We don't need to perform any GROUP BY
+    # or SORT within the query, as we will handle that using our buckets.
+    sql = sqla.text(
+        "SELECT timestamp "
+        "FROM processed_view "
+        "WHERE timestamp >= :start_time AND timestamp <= :end_time"
+    )
+    params = {
+        "start_time": query.start_time,
+        "end_time": query.end_time,
+    }
+    result = session.execute(sql, params)
 
-        return query_string
+    # Put data into buckets.
+    for r in result.all():
+        timestamp = datetime.fromisoformat(r[0])
+        bucket_index = int(
+            (timestamp - query.start_time).total_seconds() / query.time_bucket
+        )
+        buckets[bucket_index].data["count"] += 1
 
-    @staticmethod
-    def _make_results(
-        query: Query,
-        result: sqlalchemy.engine.CursorResult,
-    ) -> List[QueryResult]:
-        """
-        Given an SQLAlchemy Cursor that resulted from executing the query,
-        return a list of QueryResults.
-        """
-        has_key = query.group_what != GroupWhat.Nothing
-        # The index at which date information starts depends on whether
-        # we queried on something besides the total count.
-        date_index = 2 if has_key else 1
-
-        if query.resolution == QueryResolution.All:
-            return [
-                QueryResult(r[0], key=r[1] if has_key else None) for r in result.all()
-            ]
-        elif query.resolution == QueryResolution.Day:
-            return [
-                QueryResult(
-                    r[0],
-                    key=r[1] if has_key else None,
-                    date=util.datetime_from_day(r[date_index], r[date_index + 1]),
-                )
-                for r in result.all()
-            ]
-        elif query.resolution == QueryResolution.Week:
-            return [
-                QueryResult(
-                    r[0],
-                    key=r[1] if has_key else None,
-                    date=util.datetime_from_week(r[date_index], r[date_index + 1]),
-                )
-                for r in result.all()
-            ]
-        elif query.resolution == QueryResolution.Month:
-            return [
-                QueryResult(
-                    r[0],
-                    key=r[1] if has_key else None,
-                    date=util.datetime_from_month(r[date_index], r[date_index + 1]),
-                )
-                for r in result.all()
-            ]
-        elif query.resolution == QueryResolution.Year:
-            return [
-                QueryResult(
-                    r[0],
-                    key=r[1] if has_key else None,
-                    date=util.datetime_from_year(r[date_index]),
-                )
-                for r in result.all()
-            ]
+    return buckets
