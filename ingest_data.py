@@ -42,7 +42,7 @@ def ingest_data(
     to the specified server.
 
     The CSV file should be comma-separated. It should not have a header. The
-    expected format is `URL,IP_ADDRESS,USER_AGENT,ISO_TIMESTAMP`, with one
+    expected format is `ISO_TIMESTAMP,URL,IP_ADDRESS,USER_AGENT`, with one
     record per line.
 
     TRAFFIC_CSV: path to the CSV file to ingest.
@@ -63,10 +63,10 @@ def ingest_data(
             res = requests.post(
                 f"http://{host}:{port}/api/v1/traffic",
                 json={
-                    "url": row[0],
-                    "ip_address": row[1],
-                    "user_agent": row[2],
-                    "timestamp": row[3],
+                    "timestamp": row[0],
+                    "url": row[1],
+                    "ip_address": row[2],
+                    "user_agent": row[3],
                 },
                 headers={"Authorization": password},
             )
