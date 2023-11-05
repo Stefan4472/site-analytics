@@ -13,11 +13,12 @@
 # limitations under the License.
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Optional
 
-import marshmallow as msh
-import marshmallow_enum as msh_enum
+from marshmallow import INCLUDE, Schema, ValidationError, fields, post_load
+from marshmallow_enum import EnumField
 
-from flaskr.processing.query_runner import Filter, GroupBy, Query
+from flaskr.processing.query_runner import FilterBy, GroupBy, Query
 
 
 @dataclass
@@ -27,11 +28,11 @@ class QueryContract:
     start_time: datetime
     end_time: datetime
     time_bucket: int
-    group_by: GroupBy
-    # filter_by: Filter
+    group_by: Optional[GroupBy]
+    filter_by: Optional[FilterBy]
 
     @staticmethod
-    def get_schema() -> msh.Schema:
+    def get_schema() -> Schema:
         return QuerySchema()
 
     @staticmethod
@@ -44,17 +45,32 @@ class QueryContract:
             self.end_time,
             self.time_bucket,
             self.group_by,
+            self.filter_by,
         )
 
 
-class QuerySchema(msh.Schema):
+def validate_time_bucket(n):
+    if n < 0:
+        raise ValidationError("time_bucket must be greater than 0.")
+
+
+class QuerySchema(Schema):
     """Marshmallow schema used to parse a `QueryContract`."""
 
-    start_time = msh.fields.DateTime(required=True, allow_none=False)
-    end_time = msh.fields.DateTime(required=True, allow_none=False)
-    # time_bucket: msh.fields.Int(required=True, allow_none=False)
-    group_by = msh_enum.EnumField(GroupBy, required=True, allow_none=False)
+    start_time = fields.DateTime(required=True, allow_none=False)
+    end_time = fields.DateTime(required=True, allow_none=False)
+    # TODO: for some reason, this doesn't actually parse the field or validate it.
+    time_bucket: fields.Integer(
+        required=True, allow_none=False, strict=True, validate=validate_time_bucket
+    )
+    group_by = EnumField(GroupBy, allow_none=True, default=None, missing=None)
+    filter_by = EnumField(FilterBy, allow_none=True, default=None, missing=None)
 
-    @msh.post_load
+    class Meta:
+        unknown = INCLUDE
+
+    @post_load
     def make_contract(self, data, **kwargs) -> QueryContract:
-        return QueryContract(**data, time_bucket=86440)
+        data["time_bucket"] = int(data["time_bucket"])
+        validate_time_bucket(data["time_bucket"])
+        return QueryContract(**data)

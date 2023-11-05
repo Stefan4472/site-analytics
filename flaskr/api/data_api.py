@@ -11,10 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from datetime import datetime
-
 import marshmallow
-from flask import Blueprint, Response, jsonify, request
+from flask import Blueprint, Response, request
 from flask_login import login_required
 
 from flaskr.contracts.query_contract import QueryContract
@@ -25,14 +23,13 @@ blueprint = Blueprint("data", __name__, url_prefix="/api/v1/data")
 
 
 @blueprint.route("/query")
-# @login_required
+@login_required
 def query():
     """
     Endpoint used to execute a query against the ProcessedViews.
     Arguments are expected as query parameters.
     """
     try:
-        print(request.args)
         query_ = QueryContract.load(request.args).to_query()
         res = run_query(db.session, query_)
         return [bucket.json() for bucket in res]

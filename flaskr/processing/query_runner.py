@@ -15,7 +15,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import List
+from typing import List, Optional
 
 import sqlalchemy as sqla
 import sqlalchemy.engine
@@ -41,7 +41,7 @@ class GroupBy(Enum):
     BrowserFamily = "BROWSER_FAMILY"
 
 
-class Filter(Enum):
+class FilterBy(Enum):
     """Possible filters that can be applied to the query results."""
 
     Unset = "UNSET"
@@ -56,8 +56,8 @@ class Query:
     start_time: datetime
     end_time: datetime
     time_bucket: int
-    group_by: GroupBy
-    # filter: Filter TODO
+    group_by: Optional[GroupBy]
+    filter_by: Optional[FilterBy]
 
 
 # TODO: pretty sure this copies the data when serializing to JSON.
@@ -79,16 +79,12 @@ class Bucket:
         }
 
 
-# def build_filter(self, start_time, end_time, filter_):
-#     # Build the WHERE clause
-#     return ''
-#
-
-
 def make_select(query: Query) -> str:
+    """Builds the subject of the SELECT clause of the query."""
     first_term: str
-    if query.group_by == GroupBy.Unset:
-        first_term = "'None'"
+    if query.group_by is None or query.group_by == GroupBy.Unset:
+        # If unset, simply select the string "Count".
+        first_term = "'Count'"
     elif query.group_by == GroupBy.Country:
         first_term = "country"
     elif query.group_by == GroupBy.City:
@@ -110,6 +106,16 @@ def make_select(query: Query) -> str:
     else:
         raise ValueError("Not implemented")
     return first_term + ", timestamp"
+
+
+def make_where(query: Query) -> str:
+    """Builds the content of the WHERE clause of the query."""
+    sql = "timestamp >= :start_time AND timestamp <= :end_time"
+    if query.filter_by == FilterBy.Bots:
+        sql += " AND is_bot = TRUE"
+    elif query.filter_by == FilterBy.Humans:
+        sql += " AND is_bot = FALSE"
+    return sql
 
 
 def run_query(
@@ -151,9 +157,12 @@ def run_query(
 
     TODO: how to support bucketing by calendar month? -> time_bucket could also be allowed to be a string, e.g. MONTH.
     """
-    num_buckets = int(
-        (query.end_time - query.start_time).total_seconds() / query.time_bucket
-    )
+    total_seconds = (query.end_time - query.start_time).total_seconds()
+    num_buckets = int(total_seconds / query.time_bucket)
+    # Add another bucket if the time range doesn't evenly divide the bucket size.
+    if total_seconds % query.time_bucket:
+        num_buckets += 1
+
     if num_buckets > MAX_NUM_BUCKETS:
         raise ValueError(
             f"Too many buckets: the limit is {MAX_NUM_BUCKETS} but the query requested {num_buckets}. query={query}"
@@ -172,7 +181,7 @@ def run_query(
     sql = sqla.text(
         f"SELECT {make_select(query)} "
         "FROM processed_view "
-        "WHERE timestamp >= :start_time AND timestamp <= :end_time"
+        f"WHERE {make_where(query)}"
     )
     params = {
         "start_time": query.start_time,
