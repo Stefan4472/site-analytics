@@ -12,10 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from datetime import datetime
+from typing import Optional
 
 import pylru
 import ratelimiter
 import user_agents
+from flask import current_app
 from user_agents.parsers import UserAgent
 
 from flaskr.models.processed_view import ProcessedView
@@ -63,7 +65,7 @@ class ViewProcessor:
             device_type=self._device_type(user_agent),
         )
 
-    def _lookup_ip(self, ip_address: str) -> IpAddressInfo:
+    def _lookup_ip(self, ip_address: str) -> Optional[IpAddressInfo]:
         """
         Returns location information for the specified IP address.
 
@@ -74,9 +76,15 @@ class ViewProcessor:
         if lookup:
             return lookup
         with self._lookup_throttler:
-            ip_info = lookup_ip_address(ip_address)
-            self._ip_cache[ip_address] = ip_info
-            return ip_info
+            try:
+                ip_info = lookup_ip_address(ip_address)
+                self._ip_cache[ip_address] = ip_info
+                return ip_info
+            except ValueError as e:
+                current_app.logger.error(
+                    f"Error while processing IP address {ip_address}: {e}."
+                )
+                self._ip_cache[ip_address] = None
 
     @staticmethod
     def _is_bot(user_agent: UserAgent) -> bool:
