@@ -17,7 +17,7 @@ from flask_login import login_required
 
 from flaskr.contracts.query_contract import QueryContract
 from flaskr.database import db
-from flaskr.processing.query_runner import Query, run_query
+from flaskr.processing.query_runner import run_query
 
 blueprint = Blueprint("data", __name__, url_prefix="/api/v1/data")
 
@@ -31,7 +31,7 @@ def query():
     """
     try:
         query_ = QueryContract.load(request.args).to_query()
-        res = run_query(db.session, query_)
-        return [bucket.json() for bucket in res]
+        result = run_query(db.session, query_)
+        return result.make_json()
     except marshmallow.exceptions.ValidationError as e:
         return Response(status=400, response="Invalid parameters: {}".format(e))

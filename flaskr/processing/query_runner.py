@@ -11,14 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from collections import defaultdict
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import Optional
 
 import sqlalchemy as sqla
 import sqlalchemy.engine
+
+from flaskr.processing.query_result import QueryResult, calculate_num_buckets
 
 # The maximum number of buckets allowed for query processing.
 # This is configured to avoid overworking the system.
@@ -60,26 +61,7 @@ class Query:
     filter_by: Optional[FilterBy]
 
 
-# TODO: pretty sure this copies the data when serializing to JSON.
-# Would be good to just "natively" have it in the JSON dict.
-@dataclass
-class Bucket:
-    """Stores query results from a single "bucket" of time."""
-
-    # Timestamp at which the bucket starts.
-    timestamp: datetime
-    # Data stored for this bucket, keyed by the "group_by" of the query.
-    data: defaultdict[str, int] = field(default_factory=lambda: defaultdict(int))
-
-    def json(self) -> dict:
-        """Serialize this bucket to a JSON object."""
-        return {
-            "timestamp": self.timestamp.isoformat(),
-            "data": self.data,
-        }
-
-
-def make_select(query: Query) -> str:
+def _make_select(query: Query) -> str:
     """Builds the subject of the SELECT clause of the query."""
     first_term: str
     if query.group_by is None or query.group_by == GroupBy.Unset:
@@ -108,7 +90,7 @@ def make_select(query: Query) -> str:
     return first_term + ", timestamp"
 
 
-def make_where(query: Query) -> str:
+def _make_where(query: Query) -> str:
     """Builds the content of the WHERE clause of the query."""
     sql = "timestamp >= :start_time AND timestamp <= :end_time"
     if query.filter_by == FilterBy.Bots:
@@ -120,7 +102,7 @@ def make_where(query: Query) -> str:
 
 def run_query(
     session: "sqlalchemy.orm.scoping.scoped_session", query: Query
-) -> List[Bucket]:
+) -> QueryResult:
     """
     Dynamically generate and execute queries over the `processed_view`
     table.
@@ -157,45 +139,34 @@ def run_query(
 
     TODO: how to support bucketing by calendar month? -> time_bucket could also be allowed to be a string, e.g. MONTH.
     """
-    total_seconds = (query.end_time - query.start_time).total_seconds()
-    num_buckets = int(total_seconds / query.time_bucket)
-    # Add another bucket if the time range doesn't evenly divide the bucket size.
-    if total_seconds % query.time_bucket:
-        num_buckets += 1
-
+    num_buckets = calculate_num_buckets(
+        query.start_time, query.end_time, query.time_bucket
+    )
     if num_buckets > MAX_NUM_BUCKETS:
         raise ValueError(
-            f"Too many buckets: the limit is {MAX_NUM_BUCKETS} but the query requested {num_buckets}. query={query}"
+            f"Too many buckets: requested {num_buckets} but max is {MAX_NUM_BUCKETS}."
         )
 
-    # Initialize the buckets.
-    buckets = []
-    curr_time = query.start_time
-    for _ in range(num_buckets):
-        buckets.append(Bucket(curr_time))
-        curr_time += timedelta(seconds=query.time_bucket)
-
-    # TODO: SELECT clause and filter
     # Create and execute the query. We don't need to perform any GROUP BY
     # or SORT within the query, as we will handle that using our buckets.
     sql = sqla.text(
-        f"SELECT {make_select(query)} "
+        f"SELECT {_make_select(query)} "
         "FROM processed_view "
-        f"WHERE {make_where(query)}"
+        f"WHERE {_make_where(query)}"
     )
-    params = {
-        "start_time": query.start_time,
-        "end_time": query.end_time,
-    }
-    result = session.execute(sql, params)
+    raw_result = session.execute(
+        sql,
+        {
+            "start_time": query.start_time,
+            "end_time": query.end_time,
+        },
+    )
 
-    # Put data into buckets.
-    for r in result.all():
+    # Process results and put into buckets.
+    results = QueryResult(query.start_time, query.end_time, query.time_bucket)
+    for r in raw_result.all():
         key = r[0]
         timestamp = datetime.fromisoformat(r[1])
-        bucket_index = int(
-            (timestamp - query.start_time).total_seconds() / query.time_bucket
-        )
-        buckets[bucket_index].data[key] += 1
+        results.increment(key, timestamp)
 
-    return buckets
+    return results

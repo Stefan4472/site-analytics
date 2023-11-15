@@ -63,8 +63,10 @@ class QuerySchema(Schema):
     time_bucket: fields.Integer(
         required=True, allow_none=False, strict=True, validate=validate_time_bucket
     )
-    group_by = EnumField(GroupBy, allow_none=True, default=None, missing=None)
-    filter_by = EnumField(FilterBy, allow_none=True, default=None, missing=None)
+    group_by = EnumField(GroupBy, allow_none=True, load_default=None, dump_default=None)
+    filter_by = EnumField(
+        FilterBy, allow_none=True, load_default=None, dump_default=None
+    )
 
     class Meta:
         unknown = INCLUDE
