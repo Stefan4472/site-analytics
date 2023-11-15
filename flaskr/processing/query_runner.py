@@ -87,7 +87,7 @@ def _make_select(query: Query) -> str:
         first_term = "browser"
     else:
         raise ValueError("Not implemented")
-    return first_term + ", timestamp"
+    return f"IFNULL({first_term}, 'UNKNOWN'), timestamp"
 
 
 def _make_where(query: Query) -> str:
