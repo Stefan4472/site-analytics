@@ -22,33 +22,48 @@ from flaskr.models.raw_view import RawView
 blueprint = Blueprint("traffic", __name__, url_prefix="/api/v1/traffic")
 
 
+# The maximum number of views allowed to be reported per request.
+MAX_ALLOWED_VIEWS_PER_REQUEST = 200
+
+
 @blueprint.route("", methods=["POST"])
 @login_required
 def report_traffic():
     try:
         contract = ReportTrafficContract.load(request.json)
+        if not contract.views:
+            return Response(
+                status=400, response="The request did not contain any traffic records."
+            )
+        if len(contract.views) > MAX_ALLOWED_VIEWS_PER_REQUEST:
+            return Response(
+                status=400,
+                response=f"Too many traffic records in this request; the maximum "
+                         f"allowed is {MAX_ALLOWED_VIEWS_PER_REQUEST} but this one"
+                         f" has {len(contract.views)}",
+            )
         store_traffic(contract)
         return Response(status=200)
     except marshmallow.exceptions.ValidationError as e:
-        return Response(status=400, response="Invalid parameters: {}".format(e))
+        return Response(status=400, response=f"Invalid parameters: {e}")
 
 
 # TODO: needs a better name
 def store_traffic(contract: ReportTrafficContract):
-    contract.user_agent = contract.user_agent.strip()
-    # Write to log.
-    # TODO: use proper CSV library. Also, create a new file each day or every x records.
-    with open(current_app.config["LOG_PATH"], "a") as log_file:
-        log_file.write(
-            f"{contract.timestamp},{contract.url},{contract.ip_address},{contract.user_agent}\n"
-        )
+    for view in contract.views:
+        # Write to log.
+        # TODO: use proper CSV library. Also, create a new file each day or every x records.
+        with open(current_app.config["LOG_PATH"], "a") as log_file:
+            log_file.write(
+                f"{view.timestamp},{view.url.strip()},{view.ip_address.strip()},{view.user_agent.strip()}\n"
+            )
 
-    db.session.add(
-        RawView(
-            url=contract.url.strip(),
-            ip_address=contract.ip_address.strip(),
-            user_agent=contract.user_agent.strip(),
-            timestamp=contract.timestamp,
+        db.session.add(
+            RawView(
+                url=view.url.strip(),
+                ip_address=view.ip_address.strip(),
+                user_agent=view.user_agent.strip(),
+                timestamp=view.timestamp,
+            )
         )
-    )
-    db.session.commit()
+        db.session.commit()

@@ -11,21 +11,32 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import dataclasses as dc
-import datetime as dt
+from dataclasses import dataclass
+from datetime import datetime
+from typing import List
 
-import marshmallow as msh
+from marshmallow import (Schema, ValidationError, fields, post_load,
+                         validates_schema)
 
 
-@dc.dataclass
-class ReportTrafficContract:
+@dataclass
+class SinglePageView:
+    """A single reported page view."""
+
     url: str
     ip_address: str
     user_agent: str
-    timestamp: dt.datetime
+    timestamp: datetime
+
+
+@dataclass
+class ReportTrafficContract:
+    """Some number of page views reported to the API."""
+
+    views: List[SinglePageView]
 
     @staticmethod
-    def get_schema() -> msh.Schema:
+    def get_schema() -> Schema:
         return ReportTrafficSchema()
 
     @staticmethod
@@ -33,13 +44,20 @@ class ReportTrafficContract:
         return ReportTrafficContract.get_schema().load(data)
 
 
-class ReportTrafficSchema(msh.Schema):
-    url = msh.fields.Str(required=True, allow_none=False)
-    ip_address = msh.fields.Str(required=True, allow_none=False)
-    user_agent = msh.fields.Str(required=True, allow_none=False)
-    # ISO-format timestamp string.
-    timestamp = msh.fields.DateTime(required=True, format="iso", allow_none=False)
+class SinglePageViewSchema(Schema):
+    """The schema for SinglePageView."""
 
-    @msh.post_load
+    url = fields.Str(required=True, allow_none=False)
+    ip_address = fields.Str(required=True, allow_none=False)
+    user_agent = fields.Str(required=True, allow_none=False)
+    timestamp = fields.DateTime(required=True, format="iso", allow_none=False)
+
+
+class ReportTrafficSchema(Schema):
+    """The schema for ReportTrafficContract."""
+
+    traffic = fields.List(fields.Nested(SinglePageViewSchema))
+
+    @post_load
     def make_contract(self, data, **kwargs) -> ReportTrafficContract:
-        return ReportTrafficContract(**data)
+        return ReportTrafficContract([SinglePageView(**d) for d in data["traffic"]])
