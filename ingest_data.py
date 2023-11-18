@@ -12,11 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import csv
+from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import click
 import requests
+
+# The number of views to report in each call to the server.
+# This must be within the requirements of the API.
+BATCH_SIZE = 200
 
 
 @click.command()
@@ -29,13 +33,11 @@ import requests
 @click.argument("host", type=str)
 @click.argument("port", type=int)
 @click.password_option(required=True)
-@click.option("--max_records", type=int, help="Limits the number of records to ingest.")
 def ingest_data(
     traffic_csv: Path,
     host: str,
     port: int,
     password: str,
-    max_records: Optional[int] = None,
 ):
     """
     Reads records from the provided CSV file and sends `ReportTraffic` requests
@@ -51,31 +53,36 @@ def ingest_data(
     PASSWORD: secret key used to authenticate API requests, e.g. `dev-12345`.
     """
     click.echo(f"Will send requests to http://{host}:{port}.")
+    start_time = datetime.now()
     with open(traffic_csv, newline="") as csvfile:
-        reader = csv.reader(csvfile)
+        reader = csv.DictReader(
+            csvfile, fieldnames=["timestamp", "url", "ip_address", "user_agent"]
+        )
+        # Batch views into requests for improved performance.
+        curr_batch = {"traffic": []}
         line = 1
+        num_ingested = 0
         for row in reader:
-            if max_records is not None and line > max_records:
-                break
             if len(row) != 4:
                 raise ValueError(f"Invalid row at line {line}: {row}")
-            # TODO: batching?
-            res = requests.post(
-                f"http://{host}:{port}/api/v1/traffic",
-                json={
-                    "timestamp": row[0],
-                    "url": row[1],
-                    "ip_address": row[2],
-                    "user_agent": row[3],
-                },
-                headers={"Authorization": password},
-            )
-            if res.status_code != 200:
-                raise ValueError(
-                    f"Request failed with status {res.status_code}: {res.text}"
+            curr_batch["traffic"].append(row)
+            num_ingested += 1
+            if len(curr_batch["traffic"]) == BATCH_SIZE:
+                res = requests.post(
+                    f"http://{host}:{port}/api/v1/traffic",
+                    json=curr_batch,
+                    headers={"Authorization": password},
                 )
-            line += 1
-        click.echo(f"Sent {line-1} records for ingestion.")
+                if res.status_code != 200:
+                    raise ValueError(
+                        f"Request failed with status {res.status_code}: {res.text}"
+                    )
+                curr_batch["traffic"].clear()
+    end_time = datetime.now()
+    click.echo(
+        f"Sent {num_ingested} records for ingestion. Took "
+        f"{(end_time - start_time).seconds} seconds."
+    )
 
 
 if __name__ == "__main__":
