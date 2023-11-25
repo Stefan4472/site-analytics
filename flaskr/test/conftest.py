@@ -15,6 +15,8 @@
 import tempfile
 
 import pytest
+from flask import Flask
+from flask.testing import FlaskClient, FlaskCliRunner
 
 from flaskr import create_app, db
 from flaskr.config import SiteConfig
@@ -23,19 +25,31 @@ from flaskr.config import SiteConfig
 PYTEST_SECRET_KEY = "dev"
 
 
-@pytest.fixture
-def client():
-    """Creates an app with a temporary instance folder."""
+@pytest.fixture()
+def app() -> Flask:
+    """Creates a flask instance with a temporary instance folder and database."""
     with tempfile.TemporaryDirectory() as tempdir:
         app = create_app(test_config=SiteConfig(PYTEST_SECRET_KEY, tempdir))
-        with app.test_client() as client:
-            with app.app_context():
-                db.drop_all()
-                db.create_all()
-            yield client
+        with app.app_context():
+            db.drop_all()
+            db.create_all()
+            yield app
+
             # Close the database connection so that we can delete the sqlite file.
             db.session.close()
             db.engine.dispose()
+
+
+@pytest.fixture
+def client(app: Flask) -> FlaskClient:
+    """Returns a client pointing to a temporary flask instance."""
+    return app.test_client()
+
+
+@pytest.fixture()
+def runner(app) -> FlaskCliRunner:
+    """Returns a CLI runner pointing to a temporary flask instance."""
+    return app.test_cli_runner()
 
 
 def make_auth_headers() -> dict:

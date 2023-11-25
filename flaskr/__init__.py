@@ -56,5 +56,6 @@ def create_app(test_config: SiteConfig = None):
     app.cli.add_command(cli.init_db_command)
     app.cli.add_command(cli.reset_db_command)
     app.cli.add_command(cli.process_data)
+    app.cli.add_command(cli.garbage_collect)
 
     return app

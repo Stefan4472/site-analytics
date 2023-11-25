@@ -11,8 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pathlib
-import time
+from datetime import datetime, timedelta
 
 import click
 from flask import current_app
@@ -42,6 +41,7 @@ def reset_db_command():
     Drop existing database schema and create new one.
     This will delete all data!
     """
+    # TODO: possibly we can just rename this to ìnit-db and have a single database initialization command.
     db.drop_all()
     db.create_all()
     current_app.logger.info("Reset the database.")
@@ -50,7 +50,7 @@ def reset_db_command():
 @click.command("process-data")
 @with_appcontext
 def process_data():
-    current_app.logger.info("Running data processing")
+    current_app.logger.info("Running data processing.")
     view_processor = ViewProcessor()
     num_processed = 0
     for raw_view in RawView.query.filter_by(process_timestamp=None):
@@ -61,3 +61,28 @@ def process_data():
         num_processed += 1
     db.session.commit()
     click.echo(f"Processed {num_processed} records.")
+
+
+@click.command("garbage-collect")
+@click.option(
+    "--max_age_days",
+    type=int,
+    default=30,
+    help="The maximum age of data (in days) to keep.",
+)
+@with_appcontext
+def garbage_collect(max_age_days: int):
+    """
+    Deletes raw_views older than `max_age_days`.
+
+    We don't need to be too careful because all views are also written to a log file.
+    """
+    current_app.logger.info("Running garbage collection.")
+    cutoff_date = datetime.now() - timedelta(days=max_age_days)
+    current_app.logger.info(f"Cutoff date is {cutoff_date}")
+    num_deleted = (
+        RawView.query.filter(RawView.process_timestamp is not None)
+        .filter(RawView.process_timestamp < cutoff_date)
+        .delete()
+    )
+    current_app.logger.info(f"Deleted {num_deleted} rows.")
