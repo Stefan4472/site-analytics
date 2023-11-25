@@ -16,7 +16,7 @@ import os
 from flask import Flask
 
 from .config import SiteConfig, validate_config
-from .database import db
+from .storage.database import db
 
 
 def create_app(test_config: SiteConfig = None):
@@ -55,7 +55,6 @@ def create_app(test_config: SiteConfig = None):
 
     # Register click commands.
     app.cli.add_command(cli.init_db_command)
-    app.cli.add_command(cli.reset_db_command)
     app.cli.add_command(cli.process_data)
     app.cli.add_command(cli.garbage_collect)
 

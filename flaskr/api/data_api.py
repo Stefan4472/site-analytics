@@ -16,8 +16,8 @@ from flask import Blueprint, Response, request
 from flask_login import login_required
 
 from flaskr.contracts.query_contract import QueryContract
-from flaskr.database import db
 from flaskr.processing.query_runner import run_query
+from flaskr.storage.database import db
 
 blueprint = Blueprint("data", __name__, url_prefix="/api/v1/data")
 

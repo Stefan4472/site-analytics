@@ -11,37 +11,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Flask CLI commands."""
 from datetime import datetime, timedelta
 
 import click
 from flask import current_app
 from flask.cli import with_appcontext
 
-import flaskr.api.traffic_api as traffic_api
-from flaskr.contracts.report_traffic import ReportTrafficContract
-from flaskr.database import db
 from flaskr.models.raw_view import RawView
 from flaskr.processing.view_processor import ViewProcessor
-
-"""Flask CLI commands."""
-
-
-@click.command("init-db")
-@with_appcontext
-def init_db_command():
-    """Create tables in the database according to the schema."""
-    db.create_all()
-    current_app.logger.info("Initialized the database.")
+from flaskr.storage.database import db
 
 
 @click.command("reset-db")
 @with_appcontext
-def reset_db_command():
+def init_db_command():
     """
-    Drop existing database schema and create new one.
+    Drops the existing database schema if it exists and create new one.
     This will delete all data!
     """
-    # TODO: possibly we can just rename this to ìnit-db and have a single database initialization command.
+    current_app.logger.info("Initialized the database.")
     db.drop_all()
     db.create_all()
     current_app.logger.info("Reset the database.")
@@ -59,6 +48,11 @@ def process_data():
         raw_view.process_timestamp = processed.process_timestamp
         db.session.add(processed)
         num_processed += 1
+        if (num_processed % 500) == 0:
+            current_app.logger.info(
+                f"Committing after processing {num_processed} views."
+            )
+            db.session.commit()
     db.session.commit()
     click.echo(f"Processed {num_processed} records.")
 

@@ -15,8 +15,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import List
 
-from marshmallow import (Schema, ValidationError, fields, post_load,
-                         validates_schema)
+from marshmallow import Schema, fields, post_load
 
 
 @dataclass

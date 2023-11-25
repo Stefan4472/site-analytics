@@ -15,8 +15,8 @@ from datetime import datetime, timedelta
 
 from flask.testing import FlaskCliRunner
 
-from flaskr.database import db
 from flaskr.models.raw_view import RawView
+from flaskr.storage.database import db
 
 
 def test_garbage_collect_success(runner: FlaskCliRunner):
