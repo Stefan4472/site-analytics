@@ -31,6 +31,7 @@ def create_app(test_config: SiteConfig = None):
     os.makedirs(app.instance_path, exist_ok=True)
 
     app.config["SECRET_KEY"] = site_config.secret_key
+    # File where all received data is written out in CSV format as a backup.
     app.config["LOG_PATH"] = os.path.join(app.instance_path, "log.csv")
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(
         app.instance_path, "db.sqlite"
