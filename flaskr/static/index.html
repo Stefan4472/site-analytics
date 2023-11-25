@@ -1,0 +1,76 @@
+<!--
+Copyright 2023 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+<!doctype html>
+<html>
+  <head>
+    <title>Stefan's Site Analytics</title>
+  </head>
+  <body>
+    <div>
+      <canvas id="myChart"></canvas>
+    </div>
+  </body>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    const ctx = document.getElementById('myChart');
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: []
+      },
+      options: {
+        scales: {
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
+
+    function reqListener() {
+      let response = JSON.parse(this.responseText);
+      console.log(response);
+      let new_labels = [];
+      let new_data = [];
+      for (let i = 0; i < response.buckets.length; ++i) {
+        console.log(response.buckets[i]);
+        new_labels.push(response.buckets[i].timestamp);
+        new_data.push(response.buckets[i].data.Count);
+      }
+      console.log(new_labels);
+      console.log(new_data);
+      let new_datasets = [{
+        label: 'Count',
+        data: new_data,
+        borderWidth: 1
+      }];
+
+      chart.data = {
+        labels: new_labels,
+        datasets: new_datasets
+      };
+      chart.update();
+    }
+
+    const req = new XMLHttpRequest();
+    req.addEventListener("load", reqListener);
+    // TODO: this has the %20 encoding. Need to get rid of that.
+    req.open("GET", "http://127.0.0.1:5000/api/v1/data/query?start_time=2020-01-01%2000:00:00.000000&end_time=2021-01-01%2000:00:00.000000&time_bucket=86400");
+    req.setRequestHeader('Authorization', '1234')
+    req.send();
+  </script>
+</html>

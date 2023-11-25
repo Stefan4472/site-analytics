@@ -49,9 +49,13 @@ def create_app(test_config: SiteConfig = None):
 
     # Register blueprints.
     from .api import data_api, traffic_api
-
     app.register_blueprint(traffic_api.blueprint)
     app.register_blueprint(data_api.blueprint)
+
+    # Register the server's base URL to serve `index.html`.
+    @app.route("/")
+    def home():
+        return app.send_static_file('index.html')
 
     # Register click commands.
     app.cli.add_command(cli.init_db_command)
