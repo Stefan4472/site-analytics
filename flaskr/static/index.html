@@ -53,6 +53,9 @@ limitations under the License.
         <option value="Humans">Humans</option>
       </select>
 
+      <label for="top_n">Top N</label>
+      <input type="number" id="top_n" value="10" min="1" max="100" step="1">
+
       <button id="submit">Run Query</button>
     </div>
   </body>
@@ -76,8 +79,8 @@ limitations under the License.
     });
 
     // Parses the JSON response from the query API and returns a Chart.JS
-    // dataset.
-    function parseResponseToDataset(response) {
+    // dataset. Only keeps the "top N" series, by total count.
+    function parseResponseToDatasets(response, topN) {
       // Collect the timestamps from the buckets.
       let timestamps = [];
       for (let bucket of response.buckets) {
@@ -88,9 +91,11 @@ limitations under the License.
       let newDatasets = [];
       for (let key of response.all_keys) {
         let newData = [];
+        let totalCount = 0;
         for (let bucket of response.buckets) {
           if (key in bucket.data) {
             newData.push(bucket.data[key]);
+            totalCount += bucket.data[key];
           } else {
             newData.push(0);
           }
@@ -98,28 +103,33 @@ limitations under the License.
         newDatasets.push({
           label: key,
           data: newData,
-          borderWidth: 1
+          borderWidth: 1,
+          totalCount: totalCount,
         });
       }
 
+      // Only keep the top N.
+      newDatasets.sort((datasetA, datasetB) => {
+        return datasetB.totalCount - datasetA.totalCount;
+      });
+      let top_N = newDatasets.slice(0, topN);
+
       return {
         labels: timestamps,
-        datasets: newDatasets
+        datasets: top_N
       }
     }
 
     // Listener function that updates the chart with data from an XMLHttpRequest
     // sent to the Query API.
     function handleQueryResponse() {
-      console.log(this.responseText);
       let json = JSON.parse(this.responseText);
-      console.log(json);
-      chart.data = parseResponseToDataset(json)
+      const topN = document.getElementById("top_n").value;
+      chart.data = parseResponseToDatasets(json, topN);
       chart.update();
     }
 
     document.getElementById("submit").addEventListener('click', function() {
-      console.log('Submitted');
       const startTime = document.getElementById("start_time").value;
       const endTime = document.getElementById("end_time").value;
       const timeBucket = document.getElementById("time_bucket").value;
@@ -138,7 +148,6 @@ limitations under the License.
       if (filterBy !== "UNSET") {
         requestUrl += "&filter_by=" + filterBy;
       }
-      console.log(requestUrl);
       req.open("GET", requestUrl);
       req.setRequestHeader('Authorization', '1234')
       req.send();
