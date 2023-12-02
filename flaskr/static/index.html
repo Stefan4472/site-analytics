@@ -21,6 +21,39 @@ limitations under the License.
   <body>
     <div>
       <canvas id="myChart"></canvas>
+
+      <h2>Query Parameters</h2>
+      <label for="start_time">Start Time (UTC timestamp)</label>
+      <input type="text" id="start_time" value="2020-01-01%2000:00:00.000000"/>
+
+      <label for="end_time">End Time (UTC timestamp)</label>
+      <input type="text" id="end_time" value="2021-01-01%2000:00:00.000000"/>
+
+      <label for="time_bucket">Time Bucket (seconds)</label>
+      <input type="text" id="time_bucket" value="86400"/>
+
+      <label for="group_by">Group By</label>
+      <select id="group_by">
+        <option value="UNSET">Unset</option>
+        <option value="Country">Country</option>
+        <option value="City">City</option>
+        <option value="Region">Region</option>
+        <option value="Url">Url</option>
+        <option value="Domain">Domain</option>
+        <option value="OperatingSystem">Operating System</option>
+        <option value="Device">Device</option>
+        <option value="DeviceType">Device Type</option>
+        <option value="Browser">Browser</option>
+      </select>
+
+      <label for="filter_by">Filter By</label>
+      <select id="filter_by">
+        <option value="UNSET">Unset</option>
+        <option value="Bots">Bots</option>
+        <option value="Humans">Humans</option>
+      </select>
+
+      <button id="submit">Run Query</button>
     </div>
   </body>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -52,42 +85,63 @@ limitations under the License.
       }
 
       // Form datasets.
-      let new_datasets = [];
+      let newDatasets = [];
       for (let key of response.all_keys) {
-        let new_data = [];
+        let newData = [];
         for (let bucket of response.buckets) {
           if (key in bucket.data) {
-            new_data.push(bucket.data[key]);
+            newData.push(bucket.data[key]);
           } else {
-            new_data.push(0);
+            newData.push(0);
           }
         }
-        new_datasets.push({
+        newDatasets.push({
           label: key,
-          data: new_data,
+          data: newData,
           borderWidth: 1
         });
       }
 
       return {
         labels: timestamps,
-        datasets: new_datasets
+        datasets: newDatasets
       }
     }
 
     // Listener function that updates the chart with data from an XMLHttpRequest
     // sent to the Query API.
     function handleQueryResponse() {
+      console.log(this.responseText);
       let json = JSON.parse(this.responseText);
       console.log(json);
       chart.data = parseResponseToDataset(json)
       chart.update();
     }
 
-    const req = new XMLHttpRequest();
-    req.addEventListener("load", handleQueryResponse);
-    req.open("GET", "http://127.0.0.1:5000/api/v1/data/query?start_time=2020-01-01%2000:00:00.000000&end_time=2021-01-01%2000:00:00.000000&time_bucket=86400&group_by=Country");
-    req.setRequestHeader('Authorization', '1234')
-    req.send();
+    document.getElementById("submit").addEventListener('click', function() {
+      console.log('Submitted');
+      const startTime = document.getElementById("start_time").value;
+      const endTime = document.getElementById("end_time").value;
+      const timeBucket = document.getElementById("time_bucket").value;
+      const groupBy = document.getElementById("group_by").value;
+      const filterBy = document.getElementById("filter_by").value;
+
+      const req = new XMLHttpRequest();
+      req.addEventListener("load", handleQueryResponse);
+      let requestUrl = "http://127.0.0.1:5000/api/v1/data/query?";
+      requestUrl += "start_time=" + startTime;
+      requestUrl += "&end_time=" + endTime;
+      requestUrl += "&time_bucket=" + timeBucket;
+      if (groupBy !== "UNSET") {
+        requestUrl += "&group_by=" + groupBy;
+      }
+      if (filterBy !== "UNSET") {
+        requestUrl += "&filter_by=" + filterBy;
+      }
+      console.log(requestUrl);
+      req.open("GET", requestUrl);
+      req.setRequestHeader('Authorization', '1234')
+      req.send();
+    });
   </script>
 </html>

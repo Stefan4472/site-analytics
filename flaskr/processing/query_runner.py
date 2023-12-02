@@ -39,7 +39,7 @@ class GroupBy(Enum):
     Device = "DEVICE"
     DeviceType = "DEVICE_TYPE"
     Browser = "BROWSER"
-    BrowserFamily = "BROWSER_FAMILY"
+    # BrowserFamily = "BROWSER_FAMILY"
 
 
 class FilterBy(Enum):
@@ -78,13 +78,13 @@ def _make_select(query: Query) -> str:
     elif query.group_by == GroupBy.Domain:
         first_term = "domain"
     elif query.group_by == GroupBy.OperatingSystem:
-        first_term = "operating_system"
+        first_term = "operating_system_family"
     elif query.group_by == GroupBy.Device:
-        first_term = "device"
+        first_term = "device_brand"
     elif query.group_by == GroupBy.DeviceType:
         first_term = "device_type"
     elif query.group_by == GroupBy.Browser:
-        first_term = "browser"
+        first_term = "browser_family"
     else:
         raise ValueError("Not implemented")
     return f"IFNULL({first_term}, 'UNKNOWN'), timestamp"
