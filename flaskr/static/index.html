@@ -35,41 +35,58 @@ limitations under the License.
       options: {
         scales: {
           y: {
-            beginAtZero: true
+            beginAtZero: true,
+            stacked: true
           }
         }
       }
     });
 
-    function reqListener() {
-      let response = JSON.parse(this.responseText);
-      console.log(response);
-      let new_labels = [];
-      let new_data = [];
-      for (let i = 0; i < response.buckets.length; ++i) {
-        console.log(response.buckets[i]);
-        new_labels.push(response.buckets[i].timestamp);
-        new_data.push(response.buckets[i].data.Count);
+    // Parses the JSON response from the query API and returns a Chart.JS
+    // dataset.
+    function parseResponseToDataset(response) {
+      // Collect the timestamps from the buckets.
+      let timestamps = [];
+      for (let bucket of response.buckets) {
+        timestamps.push(bucket.timestamp);
       }
-      console.log(new_labels);
-      console.log(new_data);
-      let new_datasets = [{
-        label: 'Count',
-        data: new_data,
-        borderWidth: 1
-      }];
 
-      chart.data = {
-        labels: new_labels,
+      // Form datasets.
+      let new_datasets = [];
+      for (let key of response.all_keys) {
+        let new_data = [];
+        for (let bucket of response.buckets) {
+          if (key in bucket.data) {
+            new_data.push(bucket.data[key]);
+          } else {
+            new_data.push(0);
+          }
+        }
+        new_datasets.push({
+          label: key,
+          data: new_data,
+          borderWidth: 1
+        });
+      }
+
+      return {
+        labels: timestamps,
         datasets: new_datasets
-      };
+      }
+    }
+
+    // Listener function that updates the chart with data from an XMLHttpRequest
+    // sent to the Query API.
+    function handleQueryResponse() {
+      let json = JSON.parse(this.responseText);
+      console.log(json);
+      chart.data = parseResponseToDataset(json)
       chart.update();
     }
 
     const req = new XMLHttpRequest();
-    req.addEventListener("load", reqListener);
-    // TODO: this has the %20 encoding. Need to get rid of that.
-    req.open("GET", "http://127.0.0.1:5000/api/v1/data/query?start_time=2020-01-01%2000:00:00.000000&end_time=2021-01-01%2000:00:00.000000&time_bucket=86400");
+    req.addEventListener("load", handleQueryResponse);
+    req.open("GET", "http://127.0.0.1:5000/api/v1/data/query?start_time=2020-01-01%2000:00:00.000000&end_time=2021-01-01%2000:00:00.000000&time_bucket=86400&group_by=Country");
     req.setRequestHeader('Authorization', '1234')
     req.send();
   </script>
