@@ -21,6 +21,7 @@ limitations under the License.
   <body>
     <div>
       <canvas id="myChart"></canvas>
+      <canvas id="pie_chart"></canvas>
 
       <h2>Query Parameters</h2>
       <label for="start_time">Start Time (UTC timestamp)</label>
@@ -61,8 +62,8 @@ limitations under the License.
   </body>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
-    const ctx = document.getElementById('myChart');
-    const chart = new Chart(ctx, {
+    const line = document.getElementById('myChart');
+    const lineChart = new Chart(line, {
       type: 'line',
       data: {
         labels: [],
@@ -78,55 +79,95 @@ limitations under the License.
       }
     });
 
-    // Parses the JSON response from the query API and returns a Chart.JS
-    // dataset. Only keeps the "top N" series, by total count.
-    function parseResponseToDatasets(response, topN) {
-      // Collect the timestamps from the buckets.
-      let timestamps = [];
-      for (let bucket of response.buckets) {
-        timestamps.push(bucket.timestamp);
-      }
+   const pie = document.getElementById('pie_chart');
+   const pieChart = new Chart(pie, {
+      type: 'pie',
+      data: {
+        labels: [],
+        datasets: []
+      },
+    });
 
-      // Form datasets.
+    // Parses the JSON response from the query API and organizes the
+    // data into a format that can be easily plotted.
+    function parseResponse(response) {
       let newDatasets = [];
       for (let key of response.all_keys) {
-        let newData = [];
+        let data = [];
+        let timestamps = [];
         let totalCount = 0;
+
         for (let bucket of response.buckets) {
+          timestamps.push(bucket.timestamp);
           if (key in bucket.data) {
-            newData.push(bucket.data[key]);
+            data.push(bucket.data[key]);
             totalCount += bucket.data[key];
           } else {
-            newData.push(0);
+            data.push(0);
           }
         }
+
         newDatasets.push({
-          label: key,
-          data: newData,
-          borderWidth: 1,
+          key: key,
+          timestamps: timestamps,
+          data: data,
           totalCount: totalCount,
         });
       }
 
-      // Only keep the top N.
-      newDatasets.sort((datasetA, datasetB) => {
-        return datasetB.totalCount - datasetA.totalCount;
-      });
-      let top_N = newDatasets.slice(0, topN);
+      return newDatasets;
+    }
 
-      return {
-        labels: timestamps,
-        datasets: top_N
+    // Populates the line chart with the given data.
+    function updateLineChart(datasets) {
+      let lineSeries = [];
+      for (const dataset of datasets) {
+        lineSeries.push({
+          label: dataset.key,
+          data: dataset.data,
+          borderWidth: 1,
+        });
       }
+      lineChart.data = {
+        labels: datasets[0].timestamps,
+        datasets: lineSeries,
+      };
+      lineChart.update();
+    }
+
+    // Populates the pie chart with the totalCounts of the given datasets.
+    function updatePieChart(datasets) {
+      let labels = [];
+      let totalCounts = [];
+      for (const dataset of datasets) {
+        labels.push(dataset.key);
+        totalCounts.push(dataset.totalCount);
+      }
+      pieChart.data = {
+        labels: labels,
+        datasets: [{
+          data: totalCounts
+        }]
+      };
+      pieChart.update();
     }
 
     // Listener function that updates the chart with data from an XMLHttpRequest
     // sent to the Query API.
     function handleQueryResponse() {
       let json = JSON.parse(this.responseText);
+      let datasets = parseResponse(json);
+      console.log(datasets);
+
+      // Sort datasets by totalCount decreasing and keep the top N.
+      datasets.sort((datasetA, datasetB) => {
+        return datasetB.totalCount - datasetA.totalCount;
+      });
       const topN = document.getElementById("top_n").value;
-      chart.data = parseResponseToDatasets(json, topN);
-      chart.update();
+      datasets = datasets.slice(0, topN);
+
+      updateLineChart(datasets);
+      updatePieChart(datasets);
     }
 
     document.getElementById("submit").addEventListener('click', function() {
